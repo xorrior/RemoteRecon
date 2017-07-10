@@ -18,6 +18,32 @@ namespace RemoteReconCore
         public const int MAXIMUM_ALLOWED = 0x02000000;
         public const int PROCESS_QUERY_INFORMATION = 0x400;
         public const int PROCESS_ALL_ACCESS = 0x1F0FFF;
+        public const UInt32 SE_PRIVILEGE_ENABLED_BY_DEFAULT = 0x00000001;
+        public const UInt32 SE_PRIVILEGE_ENABLED = 0x00000002;
+        public const UInt32 SE_PRIVILEGE_REMOVED = 0x00000004;
+        public const UInt32 SE_PRIVILEGE_USED_FOR_ACCESS = 0x80000000;
+        public const int MEM_COMMIT = 0x00001000;
+        public const int MEM_RESERVE = 0x00002000;
+        public const int PAGE_NOACCESS = 0x1;
+        public const int PAGE_READONLY = 0x2;
+        public const int PAGE_READWRITE = 0x04;
+        public const int PAGE_WRITECOPY = 0x08;
+        public const int PAGE_EXECUTE = 0x10;
+        public const int PAGE_EXECUTE_READ = 0x20;
+        public const int PAGE_EXECUTE_READWRITE = 0x40;
+        public const int PAGE_EXECUTE_WRITECOPY = 0x80;
+        public const int PAGE_NOCACHE = 0x200;
+        public const int IMAGE_REL_BASED_ABSOLUTE = 0;
+        public const int IMAGE_REL_BASED_HIGHLOW = 3;
+        public const int IMAGE_REL_BASED_DIR64 = 10;
+        public const int IMAGE_SCN_MEM_DISCARDABLE = 0x02000000;
+        public const int IMAGE_SCN_MEM_EXECUTE = 0x20000000;
+        public const int IMAGE_SCN_MEM_READ = 0x4000000;
+        public const int IMAGE_SCN_MEM_WRITE = 0x8000000;
+        public const int IMAGE_SCN_MEM_NOT_CACHED = 0x04000000;
+        public const int MEM_DECOMMIT = 0x4000;
+        public const int IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002;
+
         //enums and structs
         public enum MachineType : UInt16
         {
@@ -480,6 +506,7 @@ namespace RemoteReconCore
                 get { return new string(Name); }
             }
         }
+
         [Flags]
         public enum DataSectionFlags : uint
         {
@@ -651,6 +678,92 @@ namespace RemoteReconCore
             /// The section can be written to.
             /// </summary>
             MemoryWrite = 0x80000000
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct IMAGE_BASE_RELOCATION
+        {
+            public uint VirtualAddress;
+
+            public uint SizeOfBlock;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct IMAGE_IMPORT_DESCRIPTOR
+        {
+            // Token: 0x040000E8 RID: 232
+            public uint Characteristics;
+
+            // Token: 0x040000E9 RID: 233
+            public uint TimeDateStamp;
+
+            // Token: 0x040000EA RID: 234
+            public uint ForwarderChain;
+
+            // Token: 0x040000EB RID: 235
+            public uint Name;
+
+            // Token: 0x040000EC RID: 236
+            public uint FirstThunk;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
+        public struct IMAGE_EXPORT_DIRECTORY
+        {
+            // Token: 0x040000F0 RID: 240
+            public uint Characteristics;
+
+            // Token: 0x040000F1 RID: 241
+            public uint TimeDateStamp;
+
+            // Token: 0x040000F2 RID: 242
+            public ushort MajorVersion;
+
+            // Token: 0x040000F3 RID: 243
+            public ushort MinorVersion;
+
+            // Token: 0x040000F4 RID: 244
+            public uint Name;
+
+            // Token: 0x040000F5 RID: 245
+            public uint Base;
+
+            // Token: 0x040000F6 RID: 246
+            public uint NumberOfFunctions;
+
+            // Token: 0x040000F7 RID: 247
+            public uint NumberOfNames;
+
+            // Token: 0x040000F8 RID: 248
+            public uint AddressOfFunctions;
+
+            // Token: 0x040000F9 RID: 249
+            public uint AddressOfNames;
+
+            // Token: 0x040000FA RID: 250
+            public uint AddressOfNameOrdinals;
+        }
+
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        public struct LUID_AND_ATTRIBUTES
+        {
+            public LUID Luid;
+            public UInt32 Attributes;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct LUID
+        {
+            public uint LowPart;
+            public uint HighPart;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct TOKEN_PRIVILEGES
+        {
+            public UInt32 PrivilegeCount;
+            public LUID Luid;
+            public UInt32 Attributes;
         }
         //Function definitions
         [DllImport("advapi32.dll", SetLastError = true)]
