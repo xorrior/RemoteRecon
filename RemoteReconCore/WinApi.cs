@@ -13,6 +13,7 @@ namespace RemoteReconCore
         public const int TOKEN_DUPLICATE = 2;
         public const int TOKEN_QUERY = 0X00000008;
         public const int TOKEN_IMPERSONATE = 0X00000004;
+        public const int TOKEN_ADJUST_PRIVILEGES = 0x0020;
         public const int SecurityImpersonation = 2;
         public const uint TOKEN_ALL_ACCESS = 0xf01ff;
         public const int MAXIMUM_ALLOWED = 0x02000000;
@@ -43,6 +44,11 @@ namespace RemoteReconCore
         public const int IMAGE_SCN_MEM_NOT_CACHED = 0x04000000;
         public const int MEM_DECOMMIT = 0x4000;
         public const int IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002;
+        public const int IMAGE_FILE_DLL = 0x2000;
+        public const int IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE = 0x40;
+        public const int IMAGE_DLLCHARACTERISTICS_NX_COMPAT = 0x100;
+        public const int MEM_RELEASE = 0x8000;
+        public const int ERROR_NO_TOKEN = 0x3f0;
 
         //enums and structs
         public enum MachineType : UInt16
@@ -762,10 +768,104 @@ namespace RemoteReconCore
         public struct TOKEN_PRIVILEGES
         {
             public UInt32 PrivilegeCount;
-            public LUID Luid;
-            public UInt32 Attributes;
+            public LUID_AND_ATTRIBUTES Privileges;
         }
-        //Function definitions
+
+        [Flags]
+        public enum AllocationType
+        {
+            Commit = 0x1000,
+            Reserve = 0x2000,
+            Decommit = 0x4000,
+            Release = 0x8000,
+            Reset = 0x80000,
+            Physical = 0x400000,
+            TopDown = 0x100000,
+            WriteWatch = 0x200000,
+            LargePages = 0x20000000
+        }
+
+        [Flags]
+        public enum MemoryProtection
+        {
+            Execute = 0x10,
+            ExecuteRead = 0x20,
+            ExecuteReadWrite = 0x40,
+            ExecuteWriteCopy = 0x80,
+            NoAccess = 0x01,
+            ReadOnly = 0x02,
+            ReadWrite = 0x04,
+            WriteCopy = 0x08,
+            GuardModifierflag = 0x100,
+            NoCacheModifierflag = 0x200,
+            WriteCombineModifierflag = 0x400
+        }
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, AllocationType flAllocationType, MemoryProtection flProtect);
+
+        [DllImport("msvcrt.dll", SetLastError = true)]
+        public static extern IntPtr memset(IntPtr dest, int value, IntPtr count);
+
+        [DllImport("msvcrt.dll", SetLastError = true)]
+        public static extern IntPtr memcpy(IntPtr dest, IntPtr src, UIntPtr count);
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
+        public static extern IntPtr LoadLibrary(string name);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string function);
+
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        public static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, AllocationType dwFreeType);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool VirtualFree(IntPtr lpAddress, uint dwSize, AllocationType dwFreeType);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        public static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool FreeLibrary(IntPtr hModule);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern UInt32 WaitForSingleObject(IntPtr hHandle, UInt32 dwMilliseconds);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, UIntPtr size, out UIntPtr lpNumberOfBytesWritten);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool ReadProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, [Out] byte[] lpBuffer, int dwSize, out IntPtr lpNumberOfBytesRead);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, UIntPtr dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool OpenThreadToken( IntPtr ThreadHandle, uint DesiredAccess, bool OpenAsSelf, out IntPtr TokenHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetCurrentThread();
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAllPrivileges, ref TOKEN_PRIVILEGES NewState, UInt32 BufferLengthInBytes, ref TOKEN_PRIVILEGES PreviousState, out UInt32 ReturnLengthInBytes);
+
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out LUID lpLuid);
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        public static extern bool ImpersonateSelf(Int32 ImpersonationLevel);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetExitCodeThread(IntPtr hThread, out IntPtr lpExitCode);
         [DllImport("advapi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool OpenProcessToken(IntPtr ProcessHandle, UInt32 DesiredAccess, out IntPtr TokenHandle);
@@ -775,5 +875,15 @@ namespace RemoteReconCore
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenProcess(UInt32 processAccess, bool bInheritHandle, int processId);
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern UInt32 NtCreateThreadEx(out IntPtr ThreadHandle, uint desiredAccess, IntPtr objectAttributes, IntPtr hProcess, IntPtr lpStartAddress, IntPtr lpParameter, bool createSuspended, uint stackZeroBits, uint sizeOfStackCommit, uint sizeOfStackReserve, IntPtr lpBuffer);
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool IsWow64Process(IntPtr processHandle, ref bool wow64Process);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr CreateThread(uint lpThreadAttributes, uint StackSize, IntPtr lpAddress, IntPtr lParam, uint dwCreationFlags, out uint lpThreadId);
     }
 }
