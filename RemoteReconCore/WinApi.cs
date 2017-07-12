@@ -801,6 +801,83 @@ namespace RemoteReconCore
             WriteCombineModifierflag = 0x400
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PROCESS_INFORMATION
+        {
+            public IntPtr hProcess;
+            public IntPtr hThread;
+            public int dwProcessId;
+            public int dwThreadId;
+        }
+
+        public struct STARTUPINFO
+        {
+            public uint cb;
+
+            public string lpReserved;
+
+            public string lpDesktop;
+
+            public string lpTitle;
+
+            public uint dwX;
+
+            public uint dwY;
+
+            public uint dwXSize;
+
+            public uint dwYSize;
+
+            public uint dwXCountChars;
+
+            public uint dwYCountChars;
+
+            public uint dwFillAttribute;
+
+            public uint dwFlags;
+
+            public short wShowWindow;
+
+            public short cbReserved2;
+
+            public IntPtr lpReserved2;
+
+            public IntPtr hStdInput;
+
+            public IntPtr hStdOutput;
+
+            public IntPtr hStdError;
+
+        }
+
+        public enum ProcessCreationFlags : uint
+        {
+            ZERO_FLAG = 0x00000000,
+            CREATE_BREAKAWAY_FROM_JOB = 0x01000000,
+            CREATE_DEFAULT_ERROR_MODE = 0x04000000,
+            CREATE_NEW_CONSOLE = 0x00000010,
+            CREATE_NEW_PROCESS_GROUP = 0x00000200,
+            CREATE_NO_WINDOW = 0x08000000,
+            CREATE_PROTECTED_PROCESS = 0x00040000,
+            CREATE_PRESERVE_CODE_AUTHZ_LEVEL = 0x02000000,
+            CREATE_SEPARATE_WOW_VDM = 0x00001000,
+            CREATE_SHARED_WOW_VDM = 0x00001000,
+            CREATE_SUSPENDED = 0x00000004,
+            CREATE_UNICODE_ENVIRONMENT = 0x00000400,
+            DEBUG_ONLY_THIS_PROCESS = 0x00000002,
+            DEBUG_PROCESS = 0x00000001,
+            DETACHED_PROCESS = 0x00000008,
+            EXTENDED_STARTUPINFO_PRESENT = 0x00080000,
+            INHERIT_PARENT_AFFINITY = 0x00010000
+        }
+
+        public struct SECURITY_ATTRIBUTES
+        {
+            public int length;
+            public IntPtr lpSecurityDescriptor;
+            public bool bInheritHandle;
+        }
+
         [DllImport("kernel32.dll")]
         public static extern IntPtr VirtualAlloc(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
 
@@ -885,5 +962,28 @@ namespace RemoteReconCore
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr CreateThread(uint lpThreadAttributes, uint StackSize, IntPtr lpAddress, IntPtr lParam, uint dwCreationFlags, out uint lpThreadId);
+
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern bool CreateProcessAsUser(
+            IntPtr hToken,
+            string lpApplicationName,
+            string lpCommandLine,
+            ref SECURITY_ATTRIBUTES lpProcessAttributes,
+            ref SECURITY_ATTRIBUTES lpThreadAttributes,
+            bool bInheritHandles,
+            uint dwCreationFlags,
+            IntPtr lpEnvironment,
+            string lpCurrentDirectory,
+            ref STARTUPINFO lpStartupInfo,
+            out PROCESS_INFORMATION lpProcessInformation);
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern uint NtUnmapViewOfSection(IntPtr hProcess, IntPtr lpBaseAddress);
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern int NtCreateSection(IntPtr SectionHandle, )
+
+        [DllImport("ntdll.dll", SetLastError = true)]
+        public static extern int NtWriteVirtualMemory(IntPtr hProcess, IntPtr lpBaseAddress, IntPtr lpBuffer, uint nSize, IntPtr lpNumberOfBytesWritten);
     }
 }
