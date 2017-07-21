@@ -20,7 +20,7 @@ void DoStuff(LPVOID lpParam)
 
 	_Type* PsRuntime = NULL;
 	HRESULT hr = NULL;
-	wchar_t* argument = L"THIS DOES NOTHING";
+	wchar_t* argument = L"";
 
 	hr = SetupPSRuntime(&PsRuntime);
 	if (SUCCEEDED(hr) && PsRuntime != NULL) {

@@ -19,8 +19,7 @@ namespace server
 
         public static void Run(string nothing)
         {
-            MessageBox.Show("Running the server!");
-            IpcChannel ipc = new IpcChannel("localhost:52341");
+            IpcChannel ipc = new IpcChannel("rr_ks");
             ChannelServices.RegisterChannel(ipc, false);
             RemoteRecon recon = new RemoteRecon();
 

