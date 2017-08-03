@@ -301,6 +301,14 @@ function Invoke-RemoteReconCmd {
 
     SWITCH. Issue a Keylog command.
 
+    .PARAMETER KeylogStop
+
+    SWITCH. Stop the keylogger.
+
+    .PARAMETER ProcessId
+
+    Id of the target process for the Keylog, Screenshot, or Impersonate commands.
+
     .PARAMETER Mimikatz
 
     SWITCH. Issue a Mimikatz command.
@@ -316,9 +324,19 @@ function Invoke-RemoteReconCmd {
     .PARAMETER PowerShellCommand
 
     Powershell command to run with PowerShell module.
+
+    .PARAMETER Sleep
+
+    SWITCH. Issue a Sleep command
+
+    .PARAMETER Time
+
+    Amount of time to sleep.
     
     .EXAMPLE
-    An example
+    Issue a Screenshot command on a remote system with the specified PID. 
+
+    Invoke-RemoteReconCmd -ComputerName 'RemotePwned.Domain.local' -Screenshot -ProcessId 4553
     
     .NOTES
     General notes
@@ -368,11 +386,6 @@ function Invoke-RemoteReconCmd {
         [parameter(Mandatory=$false, ParameterSetName='PowerShell')]
         [ValidateNotNullOrEmpty()]
         [string]$PowerShellCommand,
-
-        [parameter(Mandatory=$false, ParameterSetName='PowerShell')]
-        [ValidateNotNullOrEmpty()]
-        [ValidateScript({Test-Path $_})]
-        [string]$ScriptPath,
 
         [parameter(Mandatory=$true, ParameterSetName='Sleep')]
         [switch]$Sleep,
@@ -500,10 +513,11 @@ function Invoke-RemoteReconCmd {
 function Get-ReconResult {
     <#
     .SYNOPSIS
-    Short description
+    Use this function to retrieve the result of any RemoteRecon command.
     
     .DESCRIPTION
-    Long description
+    Use this function to retrieve the result of any RemoteRecon commands. This will obtain the result and result 
+    data from the corresponding registry keys for a given path.
     
     .EXAMPLE
     An example
@@ -627,7 +641,7 @@ function Get-ReconResult {
                 }
 
                 if ($result.sValue -ne $null) {
-                    $png = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
+                    $png = [Convert]::FromBase64String($result.sValue)
                     Set-Content -Path $FilePath -Encoding Byte -Value $png
                     $returnObject.Output = Get-ChildItem -Path $FilePath
                 }
