@@ -50,7 +50,6 @@
   <ItemGroup>
     <Compile Include="Core.cs" />
     <Compile Include="Injector.cs" />
-    <Compile Include="PowerShellExec.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WinApi.cs" />
   </ItemGroup>

@@ -285,24 +285,6 @@ namespace RemoteReconCore
             }
         }
         
-        /*private byte[] GetReconModule()
-        {
-            string resourceName = "";
-            string bytestring = "";
-            if (IntPtr.Size == 8)
-                resourceName = "RemoteReconCore.RemoteReconHostx64.txt";
-            else
-                resourceName = "RemoteReconCore.RemoteReconHostx86.txt";
-
-            var assembly = Assembly.GetExecutingAssembly();
-            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-            using (StreamReader reader = new StreamReader(stream))
-            {
-                bytestring = reader.ReadToEnd();
-            }
-
-            return Convert.FromBase64String(bytestring);
-        }*/
 
         private byte[] PatchRemoteReconNative(string cmd)
         {
