@@ -1,16 +1,50 @@
 function Install-RemoteRecon {
     <#
     .SYNOPSIS
-    Short description
+    Use this function to install the RemoteRecon agent on a remote system.
     
+    Author: Chris Ross (@xorrior)
+    License: BSD 3-Clause
+
     .DESCRIPTION
-    Long description
+    Use this function to install the RemoteRecon agent on a remote system. Installation involves install a remote 
+    WMI event subscription with an ActiveScriptEventConsumer. The JScript payload for this subscription will be 
+    RemoteRecon. The event will fire upon a change in the Run registry value. 
+
+    .PARAMETER ComputerName
+
+    Host name or IP to target
+
+    .PARAMETER RegistryPath
+
+    Base registry key where RemoteRecon will be installed.
+
+    .PARAMETER FilterName
+
+    Name to use for the Filter.
+
+    .PARAMETER ConsumerName
+
+    Name to use for the ActiveScriptEventConsumer.
+
+    .PARAMETER UserName
+
+    UserName of the account to use for the Credential parameter.
+
+    .PARAMETER Password
+
+    Password of the account to use for the Credential parameter.
     
     .EXAMPLE
-    An example
-    
-    .NOTES
-    General notes
+    Install the RemoteRecon agent on a remote system.
+
+    Install-RemoteRecon -ComputerName 'Test.Domain.Local'
+
+    .EXAMPLE
+    Install the RemoteRecon agent on a remote system using the specified credentials
+
+    Install-RemoteRecon -ComputerName 'Test.Domain.Local' -UserName 'bob' -Password 'miller'
+
     #>
 
     [CmdletBinding()]
@@ -23,10 +57,6 @@ function Install-RemoteRecon {
         [parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]$RegistryPath = "SOFTWARE\Intel\PSIS",
-
-        [parameter(Mandatory=$false)]
-        [ValidateNotNullOrEmpty()]
-        [string]$ClassName = 'WSUSClass',
 
         [parameter(Mandatory=$False)]
         [ValidateNotNullOrEmpty()]
@@ -239,10 +269,53 @@ function Install-RemoteRecon {
 function Invoke-RemoteReconCmd {
     <#
     .SYNOPSIS
-    Short description
+    Use this function to issue and RemoteRecon agent commands.
+
+    Author: Chris Ross (@xorrior)
+    License: BSD 3-Clause
     
     .DESCRIPTION
-    Long description
+    Use this function to issue commands to a RemoteRecon agent via the registry.
+
+    .PARAMETER ComputerName
+
+    Target host to issue command
+
+    .PARAMETER UserName
+
+    UserName to create the PSCredential object.
+
+    .PARAMETER Password
+
+    Password to create the PSCredential object.
+
+    .PARAMETER Impersonate
+
+    SWITCH. Issue an Impersonate command.
+
+    .PARAMETER Screenshot
+
+    SWITCH. Issue a Screenshot command.
+
+    .PARAMETER Keylog
+
+    SWITCH. Issue a Keylog command.
+
+    .PARAMETER Mimikatz
+
+    SWITCH. Issue a Mimikatz command.
+
+    .PARAMETER MimikatzCommand
+
+    Command to run with Mimikatz.
+
+    .PARAMETER PowerShell
+
+    SWITCH. Issue a PowerShell command.
+
+    .PARAMETER PowerShellCommand
+
+    Powershell command to run with PowerShell module.
     
     .EXAMPLE
     An example
