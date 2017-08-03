@@ -15,8 +15,7 @@ namespace RemoteReconKS
         {
             if (capability.ToLower() == "screenshot")
             {
-                
-                NamedPipeServerStream server = new NamedPipeServerStream("svc_shot", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
+                NamedPipeServerStream server = new NamedPipeServerStream("svc_ss", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
                 server.WaitForConnection();
                 StreamWriter sw = new StreamWriter(server);
 

