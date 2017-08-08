@@ -8,7 +8,6 @@ namespace RemoteReconCore
     {
         private int targetPid;
         public bool InProgress;
-        private WindowsImpersonationContext context;
 
         public Impersonate(int pid)
         {

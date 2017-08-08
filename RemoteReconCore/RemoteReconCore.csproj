@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RemoteReconCore</RootNamespace>
     <AssemblyName>RemoteReconCore</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
@@ -75,6 +75,6 @@
   </Target>
   <Import Project="..\packages\Costura.Fody.1.6.2\build\portable-net+sl+win+wpa+wp\Costura.Fody.targets" Condition="Exists('..\packages\Costura.Fody.1.6.2\build\portable-net+sl+win+wpa+wp\Costura.Fody.targets')" />
   <PropertyGroup>
-    <PostBuildEvent>DotNetToJscript.exe -n --lang=JScript --ver=v4 -c=RemoteReconCore.Agent  -o=$(SolutionDir)\RemoteRecon.js $(TargetPath)</PostBuildEvent>
+    <PostBuildEvent>DotNetToJscript.exe -n --lang=JScript --ver=Auto -c=RemoteReconCore.Agent  -o=$(SolutionDir)\RemoteRecon.js $(TargetPath)</PostBuildEvent>
   </PropertyGroup>
 </Project>

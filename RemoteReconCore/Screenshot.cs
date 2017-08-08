@@ -29,7 +29,6 @@ namespace RemoteReconCore
                 return new KeyValuePair<int, string>(2, "Recon module injection failed.");
             else
             {
-                //TODO: Write named pipe client to grab output from the remote module
 #if DEBUG
                 Console.WriteLine("Attempting to connect to named pipe");
 #endif

