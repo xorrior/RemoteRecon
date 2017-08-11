@@ -797,6 +797,112 @@ function Get-Screenshot {
     $returnObject
 }
 
+Remove-Token {
+    <#
+    .SYNOPSIS
+
+    This function is used to revert the current token context to the previous one.
+
+    .DESCRIPTION
+
+    This function will revert the current token context to the previous one by using WindowsImpersonationContext.Undo() method.
+
+    .PARAMETER ComputerName
+
+    Host to target
+
+    .PARAMETER Credential
+
+    PSCredential to use with against the host.
+
+    .PARAMETER RegistryPath
+
+    Base registry path to use for the Agent.
+
+    .EXAMPLE
+
+    Revert the current token context
+
+    Remove-Token -ComputerName 'testbox.test.local' -Credential $Credential
+    
+    #>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [ValidateNotNullOrEmpty()]
+        [string]$ComputerName,
+
+        [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
+        [ValidateNotNullOrEmpty()]
+        [PSCredential]$Credential,
+
+        [Parameter(Mandatory=$false)]
+        [ValidateNotNullOrEmpty()]
+        [string]$RegistryPath = "SOFTWARE\Intel\PSIS"
+    )
+
+    $wmiArgs = @{
+        Namespace = 'root\default'
+        Class = 'StdRegProv'
+        Name = 'SetStringValue'
+    }
+    $commonArgs = @{}
+
+    $HKEY_LOCAL_MACHINE = [UInt32]2147483650
+    $RegistryPath = $RegistryPath.Replace('\', '\\')
+
+    #Check if credentials were given
+    if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
+        if ($PSBoundParameters['ComputerName']) {
+            $commonArgs['ComputerName'] = $ComputerName
+            if ($PSBoundParameters['Credential']) {
+                $commonArgs['Credential'] = $Credential
+            }
+        }
+    }
+
+    $returnObject = New-Object -TypeName PSObject
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ComputerName' -Value $ComputerName
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Command' -Value 'RemoveToken'
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Args' -Value ''
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'ReturnCode' -Value ''
+    $returnObject | Add-Member -MemberType 'NoteProperty' -Name 'Result' -Value ''
+
+    if (-not $PSBoundParameters['Results']) {
+        #send the command  
+        $wmiArgs['Name'] = "SetDWORDValue"
+        $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$CommandKey,4
+        $result = Invoke-WmiMethod @wmiArgs @commonArgs
+        if ($result.ReturnValue -ne 0) {
+            Write-Warning "[-] Unable to issue Remove/RevertToken command. WMI returnValue: $($result.returnValue)"
+        }
+    }
+    else {
+        #Get the result
+        $wmiArgs['Name'] = "GetDWORDValue"
+        $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$ResultsKey
+        $result = Invoke-WmiMethod @wmiArgs @commonArgs
+        if ($result.ReturnValue -ne 0) {
+            Write-Warning "[-] Unable to obtain result for Remove/Revert-Token command. WMI returnValue: $($result.returnValue)"
+        }
+
+        $returnObject.ReturnCode = $result.uValue
+
+        #Get the result message, if any
+        $wmiArgs['Name'] = "GetStringValue"
+        $wmiArgs['ArgumentList'] = $HKEY_LOCAL_MACHINE,$RegistryPath,$RunKey
+        $result = Invoke-WmiMethod @wmiArgs @commonArgs
+        if ($result.ReturnValue -ne 0) {
+            Write-Warning "[-] Unable to obtain output for Remove/Revert-Token command. WMI returnValue $($result.returnValue)"
+        }
+
+        $returnObject.Result = [Text.Encoding]::ASCII.GetString([Convert]::FromBase64String($result.sValue))
+    }
+
+    $returnObject
+}
+
 #Declaring some variables here that will need to be available in every function
 
 #Change these key values
