@@ -320,12 +320,12 @@ function Invoke-PowerShellCmd
 
     #Check if credentials were given
     if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
-        if ($PSBoundParameters['ComputerName']) {
-            $commonArgs['ComputerName'] = $ComputerName
-            if ($PSBoundParameters['Credential']) {
-                $commonArgs['Credential'] = $Credential
-            }
+        $commonArgs['ComputerName'] = $ComputerName
+            
+        if ($PSBoundParameters['Credential']) {
+            $commonArgs['Credential'] = $Credential
         }
+        
     }
 
     $returnObject = New-Object -TypeName PSObject
@@ -449,12 +449,12 @@ function Invoke-Impersonation
 
     #Check if credentials were given
     if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
-        if ($PSBoundParameters['ComputerName']) {
-            $commonArgs['ComputerName'] = $ComputerName
-            if ($PSBoundParameters['Credential']) {
-                $commonArgs['Credential'] = $Credential
-            }
+        $commonArgs['ComputerName'] = $ComputerName
+            
+        if ($PSBoundParameters['Credential']) {
+            $commonArgs['Credential'] = $Credential
         }
+        
     }
 
     $returnObject = New-Object -TypeName PSObject
@@ -566,12 +566,12 @@ function Invoke-InjectReflectiveDll {
 
     #Check if credentials were given
     if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
-        if ($PSBoundParameters['ComputerName']) {
-            $commonArgs['ComputerName'] = $ComputerName
-            if ($PSBoundParameters['Credential']) {
-                $commonArgs['Credential'] = $Credential
-            }
+        $commonArgs['ComputerName'] = $ComputerName
+            
+        if ($PSBoundParameters['Credential']) {
+            $commonArgs['Credential'] = $Credential
         }
+        
     }
 
     $returnObject = New-Object -TypeName PSObject
@@ -720,12 +720,12 @@ function Get-Screenshot {
 
     #Check if credentials were given
     if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
-        if ($PSBoundParameters['ComputerName']) {
-            $commonArgs['ComputerName'] = $ComputerName
-            if ($PSBoundParameters['Credential']) {
-                $commonArgs['Credential'] = $Credential
-            }
+        $commonArgs['ComputerName'] = $ComputerName
+            
+        if ($PSBoundParameters['Credential']) {
+            $commonArgs['Credential'] = $Credential
         }
+        
     }
 
     $returnObject = New-Object -TypeName PSObject
@@ -862,12 +862,12 @@ function Remove-Token {
 
     #Check if credentials were given
     if ($PSCmdlet.ParameterSetName -eq 'Credentials') {
-        if ($PSBoundParameters['ComputerName']) {
-            $commonArgs['ComputerName'] = $ComputerName
-            if ($PSBoundParameters['Credential']) {
-                $commonArgs['Credential'] = $Credential
-            }
+        $commonArgs['ComputerName'] = $ComputerName
+            
+        if ($PSBoundParameters['Credential']) {
+            $commonArgs['Credential'] = $Credential
         }
+        
     }
 
     $returnObject = New-Object -TypeName PSObject
