@@ -797,7 +797,7 @@ function Get-Screenshot {
     $returnObject
 }
 
-Remove-Token {
+function Remove-Token {
     <#
     .SYNOPSIS
 
