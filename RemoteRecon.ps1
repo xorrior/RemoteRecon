@@ -286,13 +286,14 @@ function Invoke-PowerShellCmd
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [Parameter(Mandatory=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName,
 
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
-        [PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]
+        $Credential,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -302,7 +303,7 @@ function Invoke-PowerShellCmd
         [ValidateNotNullOrEmpty()]
         [string]$RegistryPath = "SOFTWARE\Intel\PSIS",
 
-        [Parameter(Mandatory=$false, ParameterSetName='Results')]
+        [Parameter(Mandatory=$false)]
         [switch]$Results
 
     )
@@ -415,13 +416,14 @@ function Invoke-Impersonation
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [Parameter(Mandatory=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName,
 
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
-        [PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]
+        $Credential,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -431,7 +433,7 @@ function Invoke-Impersonation
         [ValidateNotNullOrEmpty()]
         [string]$RegistryPath = "SOFTWARE\Intel\PSIS",
 
-        [Parameter(Mandatory=$false, ParameterSetName='Results')]
+        [Parameter(Mandatory=$false)]
         [switch]$Results
     )
 
@@ -527,13 +529,14 @@ function Invoke-InjectReflectiveDll {
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [Parameter(Mandatory=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName,
 
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
-        [PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]
+        $Credential,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -677,13 +680,14 @@ function Get-Screenshot {
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [Parameter(Mandatory=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName,
 
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
-        [PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]
+        $Credential,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
@@ -700,7 +704,7 @@ function Get-Screenshot {
         [ValidateNotNullOrEmpty()]
         [string]$ImageSavePath = "$((Get-Location).Path)\$(Get-Date -f 'yyyy-mm-dd-hh-mm-ss').png",
 
-        [Parameter(Mandatory=$false, ParameterSetName='Results')]
+        [Parameter(Mandatory=$false)]
         [switch]$Results
     )
 
@@ -829,17 +833,21 @@ function Remove-Token {
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory=$false, ParameterSetName='Credentials')]
+        [Parameter(Mandatory=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
         [string]$ComputerName,
 
         [Parameter(Mandatory=$false, ValueFromPipeline=$true, ParameterSetName='Credentials')]
         [ValidateNotNullOrEmpty()]
-        [PSCredential]$Credential,
+        [System.Management.Automation.PSCredential]
+        $Credential,
 
         [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
-        [string]$RegistryPath = "SOFTWARE\Intel\PSIS"
+        [string]$RegistryPath = "SOFTWARE\Intel\PSIS",
+
+        [Parameter(Mandatory=$true)]
+        [switch]$Results
     )
 
     $wmiArgs = @{
