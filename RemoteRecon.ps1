@@ -280,6 +280,12 @@ function Invoke-PowerShellCmd
     Execute a powershell command 
 
     Invoke-PowerShellCmd -ComputerName '192.168.1.1' -Credential $Credentials -Cmd "ps -name exp*" -Verbose 
+
+    .EXAMPLE 
+
+    Retrieve the command result
+
+    Invoke-PowerShellCmd -ComputerName '192.168.1.1' -Credential $Credentials -Results
     
     #>
 
@@ -411,6 +417,11 @@ function Invoke-Impersonation
 
     Invoke-Impersonation -ComputerName '192.168.1.1' -Credentials $Credential -ProcessId 4857 -Verbose
 
+    .EXAMPLE 
+    Retrieve the command result
+
+    Invoke-Impersonation -ComputerName '192.168.1.1' -Credentials $Credential -Results
+
     #>
 
     [CmdletBinding()]
@@ -514,16 +525,46 @@ function Invoke-Impersonation
 function Invoke-InjectReflectiveDll {
     <#
     .SYNOPSIS
-    Short description
+    This function can be used to inject a Stephen Fewer Reflective Dll into a remote process from the agent.
     
     .DESCRIPTION
-    Long description
+    This function will inject a Stephen Fewer Reflective Dll into a remote process. The agent will use the export "ReflectiveLoader" as
+    the lpStartAddress parameter for CreateRemoteThread.
     
+    .PARAMETER ComputerName
+
+    Host to target
+
+    .PARAMETER Credential
+
+    PSCredential to use against the target host.
+
+    .PARAMETER RegistryPath
+
+    Base registry path for the Agent
+
+    .PARAMETER ProcessId
+
+    Id of the target process.
+
+    .PARAMETER Dll
+
+    Raw bytes of the Reflective Dll
+
+    .PARAMETER Results
+
+    SWITCH. Return results of this command.
+
     .EXAMPLE
-    An example
+    Inject Reflective Dll into pid 4400
+
+    Invoke-InjectReflectiveDll -ComputerName 'pwnage.sub.local' -Credential $Credential -ProcessId 4400 -Dll $bytes
+
+    .EXAMPLE 
+    Return the results 
+
+    Invoke-InjectReflectiveDll -ComputerName 'pwnage.sub.local' -Credential $Credential -Results
     
-    .NOTES
-    General notes
     #>
 
     [CmdletBinding()]
@@ -675,6 +716,11 @@ function Get-Screenshot {
     
     Get-Screenshot -ComputerName 'BOBBYBushay.host.local' -Credential $Credential -ProcessId 1999 -x64 -Verbose
 
+    .EXAMPLE 
+    Get screenshot command result
+
+    Get-Screenshot -ComputerName 'BOBBYBushay.host.local' -Credential $Credential -Results
+
     #>
 
     [CmdletBinding()]
@@ -700,7 +746,7 @@ function Get-Screenshot {
         [Parameter(Mandatory=$false)]
         [switch]$x64,
 
-        [Parameter(Mandatory=$false, ParameterSetName='Results')]
+        [Parameter(Mandatory=$false)]
         [ValidateNotNullOrEmpty()]
         [string]$ImageSavePath = "$((Get-Location).Path)\$(Get-Date -f 'yyyy-mm-dd-hh-mm-ss').png",
 
@@ -828,6 +874,12 @@ function Remove-Token {
     Revert the current token context
 
     Remove-Token -ComputerName 'testbox.test.local' -Credential $Credential
+
+    .EXAMPLE
+
+    Retrieve the result of the Remove-Token command
+
+    Remove-Token -ComputerName 'testbox.test.local' -Credential $Credential -Results
     
     #>
     [CmdletBinding()]
