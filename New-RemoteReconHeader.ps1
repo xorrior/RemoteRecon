@@ -1,5 +1,10 @@
 ﻿function New-RemoteReconHeader
 {
+    <#
+    .SYNOPSIS Generates a new header file in the post build event for RemoteReconKS
+    
+    Author: @tifkin_ Lee Christensen
+    #>
     [CmdletBinding()]
     [OutputType([string])]
     Param
