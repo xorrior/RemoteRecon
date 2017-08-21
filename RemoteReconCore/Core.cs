@@ -39,6 +39,7 @@ namespace RemoteReconCore
                 if ((cmd = (int)rrbase.GetValue(commandkey)) == 0)
                     continue; /*Continue if no cmd*/
 
+                // Handle the command
                 command = new KeyValuePair<int, object>(cmd, rrbase.GetValue(argumentkey));
                 HandleCommand();
 
@@ -53,7 +54,6 @@ namespace RemoteReconCore
                         rrbase.SetValue(runkey, Convert.ToBase64String(Encoding.ASCII.GetBytes((string)result.Value)), RegistryValueKind.String);
                         rrbase.SetValue(commandkey, 0);
                         rrbase.SetValue(argumentkey, "");
-                        //rrbase.SetValue(runkey, "");
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
@@ -134,7 +134,7 @@ namespace RemoteReconCore
 
         private void HandleCommand()
         {
-            //Check the command keyvalue pair for a new command.
+            //Execute the command
             if ((int)Cmd.Impersonate == command.Key)
             {
 #if DEBUG
@@ -216,6 +216,7 @@ namespace RemoteReconCore
             }
         }
 
+        //Some static class variables 
         public static int sleep = 5;
         public static WindowsImpersonationContext context = null;
         public static byte[] mod;
@@ -226,6 +227,7 @@ namespace RemoteReconCore
         public static RegistryKey rrbase;
         public static Thread t;
 
+        //Result enum for commnands
         public enum Result : int
         {
             Success = 0,
@@ -238,6 +240,7 @@ namespace RemoteReconCore
             KeylogStopFailed = 7
         }
 
+        //Command enum 
         public enum Cmd : int
         {
             None = 0,
@@ -250,7 +253,7 @@ namespace RemoteReconCore
             KeylogStop = 7
         }
         
-
+        //Helper function to patch the Native module with the appropriate command
         public static byte[] PatchRemoteReconNative(string cmd)
         {
             byte[] cmdBytes = Encoding.ASCII.GetBytes(cmd);

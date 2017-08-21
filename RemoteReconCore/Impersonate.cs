@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Principal;
 
+// This command will open a process token to impersonate
 namespace RemoteReconCore
 {
     public class Impersonate : IJobs
@@ -14,6 +15,7 @@ namespace RemoteReconCore
             targetPid = pid;
         }
 
+        
         public KeyValuePair<int, string> Run()
         {
             IntPtr hProcHandle = IntPtr.Zero;

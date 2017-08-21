@@ -15,6 +15,7 @@ namespace RemoteReconCore
             cmd = command;
         }
 
+        //Some of @sixdub's code from PowerPick used here.
         public KeyValuePair<int, string> Run()
         {
             try

