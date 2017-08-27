@@ -54,6 +54,7 @@
     <Compile Include="Injector.cs" />
     <Compile Include="Jobs.cs" />
     <Compile Include="Keylogger.cs" />
+    <Compile Include="mimikatz.cs" />
     <Compile Include="PowerShell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Screenshot.cs" />

