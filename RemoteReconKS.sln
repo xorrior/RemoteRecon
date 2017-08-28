@@ -96,8 +96,8 @@ Global
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|Any CPU.ActiveCfg = Release|Win32
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x64.ActiveCfg = Release|x64
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x64.Build.0 = Release|x64
-		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x86.ActiveCfg = Release|Win32
-		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x86.Build.0 = Release|Win32
+		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x86.ActiveCfg = Second_Release_PowerShell|Win32
+		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Release|x86.Build.0 = Second_Release_PowerShell|Win32
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Second_Release_PowerShell|Any CPU.ActiveCfg = Second_Release_PowerShell|Win32
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Second_Release_PowerShell|x64.ActiveCfg = Second_Release_PowerShell|x64
 		{FB9B5E61-7C34-4280-A211-E979E1D6977F}.Second_Release_PowerShell|x64.Build.0 = Second_Release_PowerShell|x64

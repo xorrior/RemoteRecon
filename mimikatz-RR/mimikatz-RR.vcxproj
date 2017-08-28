@@ -111,18 +111,20 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MIMIKATZRR_EXPORTS;REFLECTIVEDLLINJECTION_VIA_LOADREMOTELIBRARYR;REFLECTIVEDLLINJECTION_CUSTOM_DLLMAIN;WIN_X86;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(SolutionDir)Win32\powerkatz.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ_REPLACE86',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
@@ -132,18 +134,20 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;_USRDLL;MIMIKATZRR_EXPORTS;REFLECTIVEDLLINJECTION_CUSTOM_DLLMAIN;REFLECTIVEDLLINJECTION_VIA_LOADREMOTELIBRARYR;WIN_X64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Size</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>$(SolutionDir)x64\powerkatz.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ_REPLACE64',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>

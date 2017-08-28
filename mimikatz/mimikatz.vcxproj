@@ -37,7 +37,7 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v100</PlatformToolset>
     <PlatformToolset Condition="'$(VCTargetsPath11)' != ''">v110_xp</PlatformToolset>
-    <PlatformToolset Condition="'$(VCTargetsPath12)' != ''">v140_xp</PlatformToolset>
+    <PlatformToolset Condition="'$(VCTargetsPath12)' != ''">v140</PlatformToolset>
     <UseOfMfc>static</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="Exists('$(VCTargetsPath)\Platforms\$(Platform)\PlatformToolsets\ddk2003') Or Exists('$(VCTargetsPath)\..\Platforms\$(Platform)\PlatformToolsets\ddk2003')">
