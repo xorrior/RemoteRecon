@@ -36,7 +36,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -49,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -127,7 +127,7 @@
       <AdditionalDependencies>$(SolutionDir)Win32\powerkatz.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ_REPLACE86',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
+      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ86',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -150,7 +150,7 @@
       <AdditionalDependencies>$(SolutionDir)x64\powerkatz.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ_REPLACE64',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
+      <Command>powershell.exe -w 1 -C "$bytes = Get-Content -Encoding Byte '$(TargetPath)'; $base64 = [Convert]::ToBase64String($bytes); $script = Get-Content -Path '$(SolutionDir)\RemoteRecon.ps1'; $script = $script -replace 'MIMIKATZ64',$base64; Set-Content -Path $(SolutionDir)\RemoteRecon.ps1 -Value $script -Encoding Ascii -Force"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
