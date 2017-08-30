@@ -20,8 +20,6 @@ Keylogger
 
 Dynamically Load and execute .NET assemblies
 
-Mimikatz
-
 Support non reflective dll's for injection
 
 
