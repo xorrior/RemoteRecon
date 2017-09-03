@@ -49,4 +49,4 @@ Thanks to these individuals for their contributions via code or knowledge :)
 #### [harmj0y](https://twitter.com/harmj0y)
 
 
-#### For a more in-depth guide, please visit this [post]()
+#### For a more in-depth guide, please visit the [wiki](https://github.com/xorrior/RemoteRecon/wiki)
