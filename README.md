@@ -12,9 +12,11 @@ Screenshot
 
 Token Impersonation
 
-Inject ReflectiveDll (Must Export the ReflectiveLoader function from Stephen Fewer)
+Inject ReflectiveDll (Must Export the ReflectiveLoader function from Stephen Fewer)  
 
-Keylogger
+Inject Shellcode
+
+Keylog
 
 ### Improvements, Additions, ToDo's:
 
@@ -42,7 +44,7 @@ If you wish to make changes to the codebase on your own, there are a few depenci
 
 Thanks to these individuals for their contributions via code or knowledge :)
 
-#### [ambray](https://github.com/ambray) <- He has a cool RE/ASM course too
+#### [ambray](https://github.com/ambray)
 #### [tifkin](https://twitter.com/tifkin_)
 #### [mattifestation](https://twitter.com/mattifestation)
 #### [subtee](https://twitter.com/subTee)
