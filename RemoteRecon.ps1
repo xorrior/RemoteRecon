@@ -9,6 +9,7 @@ Install-RemoteRecon
 Uninstall-RemoteRecon
 Set-Sleep
 Invoke-TokenImpersonation
+Remove-Token
 Get-Screenshot
 Get-Keystrokes
 Invoke-InjectReflectiveDll
